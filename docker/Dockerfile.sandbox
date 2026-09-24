@@ -1,0 +1,20 @@
+# Sandbox image — no network, minimal tools, non-root execution
+FROM python:3.12-slim
+
+RUN groupadd -r sandbox && useradd -r -g sandbox -d /sandbox sandbox
+
+WORKDIR /sandbox
+
+# Minimal safe tools only
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir pandas numpy scipy requests
+
+# Read-only root, writable output only
+VOLUME ["/input", "/output"]
+
+USER sandbox
+
+CMD ["python", "/sandbox/entrypoint.py"]
