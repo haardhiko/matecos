@@ -7,6 +7,7 @@ Script to run the MATECOS FastAPI application using uvicorn.
 from __future__ import annotations
 
 import uvicorn
+
 from src.config import get_settings
 
 

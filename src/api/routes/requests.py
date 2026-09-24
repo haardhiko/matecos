@@ -9,9 +9,9 @@ from typing import Any
 import structlog
 import ulid
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.dependencies.auth import get_current_user
+from src.api.schemas.common import ErrorDetail
 from src.api.schemas.requests import (
     ApproveRequest,
     ExecutionStatusResponse,
@@ -20,7 +20,6 @@ from src.api.schemas.requests import (
     SubmitRequestResponse,
     TaskStatusItem,
 )
-from src.api.schemas.common import ErrorDetail
 
 logger: structlog.BoundLogger = structlog.get_logger(__name__)
 
@@ -31,7 +30,7 @@ router = APIRouter(prefix="/v1/requests", tags=["Requests"])
 # ---------------------------------------------------------------------------
 
 _EXECUTIONS: dict[str, dict[str, Any]] = {}  # in-process store for dev/stub
-_IDEMPOTENCY: dict[str, str] = {}            # idempotency_key -> execution_id
+_IDEMPOTENCY: dict[str, str] = {}  # idempotency_key -> execution_id
 
 
 def _get_session_stub() -> Any:
@@ -53,6 +52,7 @@ async def _get_session() -> Any:  # noqa: ANN401
     """
     try:
         from src.infrastructure.database import get_session  # type: ignore[import-not-found]
+
         async for session in get_session():
             yield session
     except ImportError:
@@ -63,6 +63,7 @@ async def _get_settings() -> Any:  # noqa: ANN401
     """Resolve the application settings instance."""
     try:
         from src.config import get_settings  # type: ignore[import-not-found]
+
         return get_settings()
     except ImportError:
         return _get_settings_stub()
@@ -151,6 +152,7 @@ async def _write_audit_event(
 
     try:
         from src.infrastructure.audit import write_audit_event  # type: ignore[import-not-found]
+
         await write_audit_event(session, execution_id, event_type, user_id, data)
     except ImportError:
         logger.info(
@@ -588,9 +590,7 @@ async def approve_action(
             detail=f"No pending approval with id '{approval_id}' in execution '{execution_id}'.",
         )
 
-    execution["pending_approvals"] = [
-        a for a in pending if a.get("approval_id") != approval_id
-    ]
+    execution["pending_approvals"] = [a for a in pending if a.get("approval_id") != approval_id]
     execution["updated_at"] = datetime.now(UTC)
 
     await _write_audit_event(
@@ -666,9 +666,7 @@ async def reject_action(
             detail=f"No pending approval with id '{approval_id}' in execution '{execution_id}'.",
         )
 
-    execution["pending_approvals"] = [
-        a for a in pending if a.get("approval_id") != approval_id
-    ]
+    execution["pending_approvals"] = [a for a in pending if a.get("approval_id") != approval_id]
     execution["updated_at"] = datetime.now(UTC)
 
     await _write_audit_event(

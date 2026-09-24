@@ -10,7 +10,6 @@ only ever depends on the protocol, never on a specific vendor SDK.
 from __future__ import annotations
 
 import json
-import logging
 from collections.abc import AsyncIterator
 from typing import Any, Literal, Protocol, runtime_checkable
 
@@ -55,7 +54,9 @@ class LLMConfig(BaseModel):
 
     model_config = {"populate_by_name": True}
 
-    model: str = Field(description="Model identifier, e.g. 'gpt-4o' or 'claude-3-5-sonnet-20241022'.")
+    model: str = Field(
+        description="Model identifier, e.g. 'gpt-4o' or 'claude-3-5-sonnet-20241022'."
+    )
     temperature: float = Field(
         default=0.1,
         ge=0.0,
@@ -297,9 +298,7 @@ class AnthropicAdapter:
             "Content-Type": "application/json",
         }
 
-    def _convert_messages(
-        self, messages: list[Message]
-    ) -> tuple[str | None, list[dict[str, Any]]]:
+    def _convert_messages(self, messages: list[Message]) -> tuple[str | None, list[dict[str, Any]]]:
         system: str | None = None
         converted: list[dict[str, Any]] = []
         for msg in messages:

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -54,8 +54,15 @@ class RepositoryQuery:
     MAX_FILE_SIZE = 1_024 * 1_024  # 1 MB
 
     _IGNORE_DIRS = {
-        ".git", "node_modules", "__pycache__", ".venv", "venv",
-        ".mypy_cache", ".pytest_cache", "dist", "build",
+        ".git",
+        "node_modules",
+        "__pycache__",
+        ".venv",
+        "venv",
+        ".mypy_cache",
+        ".pytest_cache",
+        "dist",
+        "build",
     }
 
     def __init__(self, max_file_size: int | None = None) -> None:
@@ -219,10 +226,12 @@ class RepositoryQuery:
         for entry in sorted(full_path.iterdir()):
             if entry.name in self._IGNORE_DIRS:
                 continue
-            entries.append({
-                "name": entry.name,
-                "type": "directory" if entry.is_dir() else "file",
-                "size_bytes": entry.stat().st_size if entry.is_file() else None,
-            })
+            entries.append(
+                {
+                    "name": entry.name,
+                    "type": "directory" if entry.is_dir() else "file",
+                    "size_bytes": entry.stat().st_size if entry.is_file() else None,
+                }
+            )
 
         return entries

@@ -1,8 +1,8 @@
 """Distributed locking via Redis (Redlock pattern)."""
+
 from __future__ import annotations
 
 import secrets
-import time
 from types import TracebackType
 from typing import Any
 
@@ -66,9 +66,7 @@ class DistributedLock:
         """
         token = secrets.token_hex(16)
         for attempt in range(self._retry_count):
-            acquired = await self._client.set(
-                self._key, token, px=self._ttl_ms, nx=True
-            )
+            acquired = await self._client.set(self._key, token, px=self._ttl_ms, nx=True)
             if acquired:
                 self._token = token
                 logger.debug("lock.acquired", key=self._key, attempt=attempt)
@@ -101,7 +99,7 @@ class DistributedLock:
         )
         return bool(result)
 
-    async def __aenter__(self) -> "DistributedLock":
+    async def __aenter__(self) -> DistributedLock:
         token = await self.acquire()
         if token is None:
             raise LockNotAcquiredError(f"Could not acquire lock: {self._key}")
@@ -119,6 +117,7 @@ class DistributedLock:
 
 async def _async_sleep(seconds: float) -> None:
     import asyncio
+
     await asyncio.sleep(seconds)
 
 
@@ -151,6 +150,4 @@ class LockManager:
         """Create a DistributedLock for the given key."""
         if self._client is None:
             raise RuntimeError("LockManager not connected. Call connect() first.")
-        return DistributedLock(
-            self._client, key, ttl_seconds, retry_count, retry_delay_ms
-        )
+        return DistributedLock(self._client, key, ttl_seconds, retry_count, retry_delay_ms)

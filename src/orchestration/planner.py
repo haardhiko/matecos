@@ -10,11 +10,10 @@ The ``Planner`` takes a natural-language goal and produces a validated
 from __future__ import annotations
 
 import json
-from typing import Any
 
 import structlog
 
-from src.agents.llm_interface import LLMConfig, LLMProvider, Message
+from src.agents.llm_interface import LLMConfig, LLMProvider
 from src.agents.prompts import PromptRenderer
 from src.agents.roles import ROLE_REGISTRY
 from src.orchestration.task_graph import TaskGraph
@@ -104,17 +103,13 @@ class Planner:
         tool_input = raw_json.get("tool_input", {})
         task_list = tool_input.get("task_graph")
         if not task_list or not isinstance(task_list, list):
-            raise PlanningError(
-                "Planner response missing 'tool_input.task_graph' list."
-            )
+            raise PlanningError("Planner response missing 'tool_input.task_graph' list.")
 
         # Validate each task has required fields
         for task in task_list:
             missing = [f for f in ("task_id", "role", "objective") if f not in task]
             if missing:
-                raise PlanningError(
-                    f"Task missing required fields: {missing}. Task: {task}"
-                )
+                raise PlanningError(f"Task missing required fields: {missing}. Task: {task}")
             if task["role"].lower() not in ROLE_REGISTRY:
                 raise PlanningError(
                     f"Unknown role '{task['role']}' in task '{task['task_id']}'. "

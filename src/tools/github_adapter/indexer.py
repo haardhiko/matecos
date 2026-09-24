@@ -9,7 +9,6 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 import structlog
 
@@ -84,21 +83,47 @@ _EXT_LANG_MAP: dict[str, str] = {
 
 _ENTRY_POINTS = {"main.py", "app.py", "index.js", "main.go", "main.rs", "Main.java"}
 _CONFIG_FILES = {
-    "pyproject.toml", "setup.py", "setup.cfg",
-    "package.json", "tsconfig.json",
-    "Makefile", "Dockerfile", "docker-compose.yml", "docker-compose.yaml",
-    ".github", "Cargo.toml", "go.mod",
+    "pyproject.toml",
+    "setup.py",
+    "setup.cfg",
+    "package.json",
+    "tsconfig.json",
+    "Makefile",
+    "Dockerfile",
+    "docker-compose.yml",
+    "docker-compose.yaml",
+    ".github",
+    "Cargo.toml",
+    "go.mod",
 }
 _DEP_FILES = {
-    "requirements.txt", "Pipfile", "poetry.lock", "Pipfile.lock",
-    "package-lock.json", "yarn.lock", "pnpm-lock.yaml",
-    "Cargo.lock", "go.sum", "Gemfile.lock",
+    "requirements.txt",
+    "Pipfile",
+    "poetry.lock",
+    "Pipfile.lock",
+    "package-lock.json",
+    "yarn.lock",
+    "pnpm-lock.yaml",
+    "Cargo.lock",
+    "go.sum",
+    "Gemfile.lock",
 }
 
 _IGNORE_DIRS = {
-    ".git", "node_modules", "__pycache__", ".venv", "venv",
-    ".mypy_cache", ".pytest_cache", ".tox", "dist", "build",
-    ".egg-info", "target", ".idea", ".vscode",
+    ".git",
+    "node_modules",
+    "__pycache__",
+    ".venv",
+    "venv",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".tox",
+    "dist",
+    "build",
+    ".egg-info",
+    "target",
+    ".idea",
+    ".vscode",
 }
 
 

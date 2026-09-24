@@ -46,7 +46,8 @@ class PermissionScope(BaseModel):
         description="When True, the agent may delegate tasks to sub-agents.",
     )
     max_delegation_depth: int = Field(
-        default=3, ge=0,
+        default=3,
+        ge=0,
         description="Maximum number of recursive delegation hops permitted from this agent.",
     )
     can_approve_own_actions: bool = Field(
@@ -61,19 +62,23 @@ class BudgetSpec(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     max_iterations: int = Field(
-        default=50, ge=1,
+        default=50,
+        ge=1,
         description="Maximum number of LLM reasoning iterations.",
     )
     max_time_seconds: int = Field(
-        default=3600, ge=1,
+        default=3600,
+        ge=1,
         description="Wall-clock timeout in seconds.",
     )
     max_cost_usd: float = Field(
-        default=5.0, ge=0.0,
+        default=5.0,
+        ge=0.0,
         description="Maximum spend in USD, including LLM and tool costs.",
     )
     max_tool_calls: int = Field(
-        default=100, ge=1,
+        default=100,
+        ge=1,
         description="Maximum number of tool invocations permitted.",
     )
 
@@ -89,7 +94,9 @@ class DecisionRecord(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     agent_id: str = Field(description="Identifier of the agent that made this decision.")
-    step_id: str = Field(description="Unique identifier for this decision step within the agent's run.")
+    step_id: str = Field(
+        description="Unique identifier for this decision step within the agent's run."
+    )
     decision_type: Literal[
         "tool_call", "delegate", "complete", "fail", "request_approval", "wait"
     ] = Field(description="Category of decision taken by the agent.")
@@ -139,7 +146,9 @@ class AgentTask(BaseModel):
     task_id: str = Field(description="Unique task identifier, typically a ULID.")
     execution_id: str = Field(description="Parent execution this task belongs to.")
     role: AgentRole = Field(description="Agent specialisation role that should execute this task.")
-    objective: str = Field(description="Clear, structured statement of what the agent must accomplish.")
+    objective: str = Field(
+        description="Clear, structured statement of what the agent must accomplish."
+    )
     context: dict = Field(
         default_factory=dict,
         description="Structured context data passed to the agent. Must not contain raw user input.",
@@ -197,4 +206,6 @@ class AgentResult(BaseModel):
         default_factory=list,
         description="Ordered list of structured decision records. Raw chain-of-thought is never stored.",
     )
-    completed_at: datetime = Field(description="UTC timestamp when the agent reached a terminal state.")
+    completed_at: datetime = Field(
+        description="UTC timestamp when the agent reached a terminal state."
+    )

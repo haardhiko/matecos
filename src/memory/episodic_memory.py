@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
 
 import structlog
 import ulid
@@ -145,9 +144,7 @@ class EpisodicMemoryStore:
         self._log.debug("episodic.search", results_count=len(results))
         return results
 
-    async def get_similar_episodes(
-        self, goal: str, limit: int = 5
-    ) -> list[Episode]:
+    async def get_similar_episodes(self, goal: str, limit: int = 5) -> list[Episode]:
         """Find episodes with similar goals (keyword-based).
 
         Args:

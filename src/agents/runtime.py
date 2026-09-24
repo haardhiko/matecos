@@ -22,12 +22,11 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import structlog
-import ulid
 
-from src.agents.llm_interface import LLMConfig, LLMProvider, LLMResponse, Message
+from src.agents.llm_interface import LLMConfig, LLMProvider, LLMResponse
 from src.agents.policies import AgentPolicy, BudgetExhaustedError, BudgetTracker
 from src.agents.prompts import PromptRenderer
-from src.agents.roles import AgentRoleSpec, get_role_spec
+from src.agents.roles import get_role_spec
 
 logger = structlog.get_logger(__name__)
 
@@ -190,9 +189,7 @@ class AgentRuntime:
                     "acceptance_criteria": acceptance_criteria or [],
                 }
 
-                messages = self._renderer.build_messages(
-                    role_spec.prompt_template, prompt_context
-                )
+                messages = self._renderer.build_messages(role_spec.prompt_template, prompt_context)
 
                 # Call LLM
                 start_ns = time.perf_counter_ns()
@@ -371,8 +368,7 @@ class AgentRuntime:
                     result_str = json.dumps(tool_result)
                     last_tool_result = result_str[:500]
                     history.append(
-                        f"[TOOL_CALL] {decision.tool_id} -> "
-                        f"{tool_outcome}: {result_str[:200]}"
+                        f"[TOOL_CALL] {decision.tool_id} -> {tool_outcome}: {result_str[:200]}"
                     )
 
                     decision_records.append(

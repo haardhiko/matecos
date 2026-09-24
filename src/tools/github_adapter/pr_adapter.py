@@ -95,9 +95,7 @@ class PullRequestAdapter:
         async with httpx.AsyncClient() as client:
             resp = await client.post(url, headers=self._headers(), json=payload)
             if resp.status_code != 201:
-                raise GitHubAPIError(
-                    f"Failed to create PR: {resp.status_code} {resp.text[:500]}"
-                )
+                raise GitHubAPIError(f"Failed to create PR: {resp.status_code} {resp.text[:500]}")
             data = resp.json()
 
         pr = self._parse_pr(data)
@@ -173,9 +171,7 @@ class PullRequestAdapter:
         url = f"{self._base_url}/repos/{owner}/{repo}/issues/{number}/comments"
 
         async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                url, headers=self._headers(), json={"body": body}
-            )
+            resp = await client.post(url, headers=self._headers(), json={"body": body})
             resp.raise_for_status()
             return resp.json()
 
@@ -192,7 +188,5 @@ class PullRequestAdapter:
             body=data.get("body") or "",
             user=data.get("user", {}).get("login", ""),
             labels=[lb["name"] for lb in data.get("labels", [])],
-            reviewers=[
-                r["login"] for r in data.get("requested_reviewers", [])
-            ],
+            reviewers=[r["login"] for r in data.get("requested_reviewers", [])],
         )

@@ -33,9 +33,7 @@ class BudgetExhaustedError(Exception):
         self.dimension = dimension
         self.limit = limit
         self.current = current
-        super().__init__(
-            f"Budget exhausted: {dimension} — limit={limit}, current={current}"
-        )
+        super().__init__(f"Budget exhausted: {dimension} — limit={limit}, current={current}")
 
 
 @dataclass
@@ -67,7 +65,7 @@ class BudgetTracker:
     start_time: float = field(default_factory=time.time)
 
     @classmethod
-    def from_role_spec(cls, spec: AgentRoleSpec) -> "BudgetTracker":
+    def from_role_spec(cls, spec: AgentRoleSpec) -> BudgetTracker:
         """Create a tracker pre-configured from a role specification."""
         return cls(
             max_iterations=spec.max_iterations,
@@ -105,9 +103,7 @@ class BudgetTracker:
 
         elapsed = time.time() - self.start_time
         if elapsed > self.max_duration_seconds:
-            raise BudgetExhaustedError(
-                "duration_seconds", self.max_duration_seconds, elapsed
-            )
+            raise BudgetExhaustedError("duration_seconds", self.max_duration_seconds, elapsed)
 
     @property
     def remaining(self) -> dict[str, Any]:
@@ -184,7 +180,7 @@ class AgentPolicy:
         cls,
         spec: AgentRoleSpec,
         resolved_tools: frozenset[str] | None = None,
-    ) -> "AgentPolicy":
+    ) -> AgentPolicy:
         """Build a policy from a role specification with optional resolved tool set.
 
         Args:

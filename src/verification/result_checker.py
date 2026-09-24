@@ -84,9 +84,7 @@ class ResultChecker:
             )
 
         if self._llm:
-            return await self._llm_verify(
-                task_objective, acceptance_criteria, agent_result
-            )
+            return await self._llm_verify(task_objective, acceptance_criteria, agent_result)
 
         # Heuristic fallback
         return self._heuristic_verify(acceptance_criteria, agent_result)

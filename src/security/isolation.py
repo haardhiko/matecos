@@ -7,7 +7,6 @@ Execution isolation — container and process isolation for tool execution.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
 
 import structlog
 
@@ -120,11 +119,16 @@ class IsolationManager:
             List of Docker CLI argument strings.
         """
         args: list[str] = [
-            "--network", "none",  # HARD INVARIANT — always enforced
-            "--memory", f"{policy.max_memory_mb}m",
-            "--pids-limit", str(policy.max_pids),
-            "--cpus", str(policy.max_cpu_percent / 100),
-            "--tmpfs", f"/tmp:{policy.tmpfs_size_mb}m",
+            "--network",
+            "none",  # HARD INVARIANT — always enforced
+            "--memory",
+            f"{policy.max_memory_mb}m",
+            "--pids-limit",
+            str(policy.max_pids),
+            "--cpus",
+            str(policy.max_cpu_percent / 100),
+            "--tmpfs",
+            f"/tmp:{policy.tmpfs_size_mb}m",
         ]
 
         if policy.readonly_rootfs:
@@ -134,9 +138,13 @@ class IsolationManager:
             args.extend(["--cap-drop", cap])
 
         # Security opts
-        args.extend([
-            "--security-opt", "no-new-privileges",
-            "--user", "65534:65534",  # nobody:nogroup
-        ])
+        args.extend(
+            [
+                "--security-opt",
+                "no-new-privileges",
+                "--user",
+                "65534:65534",  # nobody:nogroup
+            ]
+        )
 
         return args

@@ -9,15 +9,15 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from src.api.schemas.common import ErrorDetail, HealthResponse
-from src.api.schemas.requests import SubmitRequestBody, SubmitRequestResponse
-from src.api.schemas.tools import ToolManifest
+from src.api.schemas.common import ErrorDetail
 from src.tools.manifests import (
     FilesystemPolicy,
     NetworkPolicy,
     ResourceLimits,
     RuntimeConfig,
     SecurityPolicy,
+)
+from src.tools.manifests import (
     ToolManifest as DomainToolManifest,
 )
 
@@ -77,7 +77,9 @@ class TestToolManifestContract:
 
     def test_high_risk_requires_scan_passed(self) -> None:
         # High risk requires scan_passed=True in security policy
-        with pytest.raises(ValidationError, match="High-risk and critical tools must pass security scanning"):
+        with pytest.raises(
+            ValidationError, match="High-risk and critical tools must pass security scanning"
+        ):
             DomainToolManifest(
                 tool_id="system.code.exec",
                 name="exec",

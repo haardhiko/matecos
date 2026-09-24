@@ -6,14 +6,14 @@ Unit tests for the GitHub adapter components (indexer, query, manifest_builder, 
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
+
 import pytest
 
-from src.tools.github_adapter.indexer import RepositoryIndexer, RepoIndex
-from src.tools.github_adapter.query import RepositoryQuery
+from src.tools.github_adapter.indexer import RepoIndex, RepositoryIndexer
 from src.tools.github_adapter.manifest_builder import ManifestBuilder
 from src.tools.github_adapter.pr_adapter import PullRequest, PullRequestAdapter
+from src.tools.github_adapter.query import RepositoryQuery
 
 
 @pytest.fixture
@@ -100,7 +100,9 @@ class TestManifestBuilder:
         assert len(manifests) >= 1
         # Should have found python main.py and/or Dockerfile
         tool_ids = {m.tool_id for m in manifests}
-        assert any("python" in tid for tid in tool_ids) or any("container" in tid for tid in tool_ids)
+        assert any("python" in tid for tid in tool_ids) or any(
+            "container" in tid for tid in tool_ids
+        )
         for m in manifests:
             assert m.owner == "test-owner"
             assert m.security.network.value == "deny_all"

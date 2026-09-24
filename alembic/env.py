@@ -1,14 +1,16 @@
 """Alembic env configuration for async SQLAlchemy."""
+
 import asyncio
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+import src.infrastructure.models  # noqa: F401
+from alembic import context
+
 # Import all models so Alembic can detect them
 from src.infrastructure.database import Base  # noqa: F401
-import src.infrastructure.models  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:

@@ -1,4 +1,5 @@
 """OpenTelemetry + structlog observability setup for MATECOS."""
+
 from __future__ import annotations
 
 import logging
@@ -30,9 +31,7 @@ TASK_ID_CTX: ContextVar[str] = ContextVar("task_id", default="")
 # ── Structlog processors ──────────────────────────────────────────────────────
 
 
-def inject_trace_context(
-    logger: Any, method: str, event_dict: dict[str, Any]
-) -> dict[str, Any]:
+def inject_trace_context(logger: Any, method: str, event_dict: dict[str, Any]) -> dict[str, Any]:
     """Inject OpenTelemetry trace context into every log record."""
     span = trace.get_current_span()
     ctx = span.get_span_context()
@@ -50,9 +49,7 @@ def inject_trace_context(
     return event_dict
 
 
-def drop_private_reasoning(
-    logger: Any, method: str, event_dict: dict[str, Any]
-) -> dict[str, Any]:
+def drop_private_reasoning(logger: Any, method: str, event_dict: dict[str, Any]) -> dict[str, Any]:
     """Strip any field that could leak private chain-of-thought."""
     for key in list(event_dict.keys()):
         if key in {"reasoning", "chain_of_thought", "cot", "thinking", "scratch_pad"}:

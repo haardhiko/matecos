@@ -14,23 +14,32 @@ class ToolLimits(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     timeout_seconds: int = Field(
-        default=120, ge=1, le=3600,
+        default=120,
+        ge=1,
+        le=3600,
         description="Maximum wall-clock time allowed for a single tool invocation.",
     )
     max_memory_mb: int = Field(
-        default=512, ge=64, le=8192,
+        default=512,
+        ge=64,
+        le=8192,
         description="Memory ceiling in megabytes for the tool's runtime environment.",
     )
     max_output_kb: int = Field(
-        default=1024, ge=1, le=102400,
+        default=1024,
+        ge=1,
+        le=102400,
         description="Maximum size of the tool's output payload in kilobytes.",
     )
     max_retries: int = Field(
-        default=3, ge=0, le=10,
+        default=3,
+        ge=0,
+        le=10,
         description="Number of automatic retries on transient failure.",
     )
     cost_estimate_usd: float = Field(
-        default=0.001, ge=0.0,
+        default=0.001,
+        ge=0.0,
         description="Estimated monetary cost per invocation in USD.",
     )
 
@@ -51,8 +60,12 @@ class ToolManifest(BaseModel):
         min_length=1,
         description="Capability tags that describe what the tool can do, e.g. ['web_search', 'read_only'].",
     )
-    input_schema: dict = Field(description="JSON Schema object describing accepted input parameters.")
-    output_schema: dict = Field(description="JSON Schema object describing the tool's output structure.")
+    input_schema: dict = Field(
+        description="JSON Schema object describing accepted input parameters."
+    )
+    output_schema: dict = Field(
+        description="JSON Schema object describing the tool's output structure."
+    )
     risk_level: Literal["low", "medium", "high", "critical"] = Field(
         description="Risk classification assigned by the tool owner."
     )
@@ -102,11 +115,14 @@ class ToolRecord(ToolManifest):
         description="Most recently observed health status."
     )
     success_rate_7d: float | None = Field(
-        default=None, ge=0.0, le=1.0,
+        default=None,
+        ge=0.0,
+        le=1.0,
         description="Fraction of successful invocations over the past 7 days (0.0–1.0).",
     )
     avg_latency_ms: float | None = Field(
-        default=None, ge=0.0,
+        default=None,
+        ge=0.0,
         description="Rolling average invocation latency in milliseconds over the past 7 days.",
     )
     is_available: bool = Field(
@@ -128,9 +144,7 @@ class ToolSearchQuery(BaseModel):
         default=None,
         description="Exclude tools with a risk_level higher than this threshold.",
     )
-    runtime_type: str | None = Field(
-        default=None, description="Filter by runtime execution model."
-    )
+    runtime_type: str | None = Field(default=None, description="Filter by runtime execution model.")
     text: str | None = Field(
         default=None,
         description="Free-text query matched against the tool name and description (fuzzy).",
@@ -172,7 +186,8 @@ class HealthStatus(BaseModel):
         default=None, description="UTC timestamp of the most recent health probe."
     )
     latency_ms: float | None = Field(
-        default=None, ge=0.0,
+        default=None,
+        ge=0.0,
         description="Round-trip latency measured during the last health probe.",
     )
     error: str | None = Field(

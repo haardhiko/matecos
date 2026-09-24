@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal
 
 import structlog
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from src.tools.registry import ToolExecutionContext
@@ -112,7 +112,7 @@ class ToolSelector:
     async def select(
         self,
         required_capabilities: list[str],
-        context: "ToolExecutionContext",
+        context: ToolExecutionContext,
         preferences: ToolSelectionPreferences | None = None,
     ) -> list[RankedTool]:
         """
@@ -169,7 +169,9 @@ class ToolSelector:
             cost_score = self._score_cost(record, prefs.prefer_low_cost)
 
             # If risk exceeds max_allowed, skip entirely
-            if risk_score == 0.0 and _risk_index(manifest_obj.risk_level) > _risk_index(prefs.max_risk_level):
+            if risk_score == 0.0 and _risk_index(manifest_obj.risk_level) > _risk_index(
+                prefs.max_risk_level
+            ):
                 continue
 
             composite = (
@@ -299,10 +301,7 @@ class ToolSelector:
             from packaging.version import Version  # type: ignore[import]
 
             spec = SpecifierSet(constraint, prereleases=True)
-            filtered = [
-                c for c in candidates
-                if Version(c.manifest.version) in spec
-            ]
+            filtered = [c for c in candidates if Version(c.manifest.version) in spec]
             logger.debug(
                 "tool_selector.version_filter",
                 constraint=constraint,

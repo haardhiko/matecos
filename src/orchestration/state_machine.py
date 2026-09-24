@@ -25,10 +25,11 @@ Design notes
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Awaitable, Callable, Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 import structlog
 
@@ -321,7 +322,7 @@ class StateMachine(Generic[S]):
 
         # Pre-compute: from_state → list[to_state] (for allowed_transitions)
         self._outgoing: dict[S, list[S]] = {}
-        for (from_s, to_s) in self._transitions:
+        for from_s, to_s in self._transitions:
             self._outgoing.setdefault(from_s, []).append(to_s)
 
     # ------------------------------------------------------------------
@@ -463,7 +464,7 @@ class StateMachine(Generic[S]):
                 from_state=from_state,
                 to_state=to_state,
                 trigger=trigger,
-                timestamp=datetime.now(tz=timezone.utc),
+                timestamp=datetime.now(tz=UTC),
                 metadata=metadata or {},
             )
 
@@ -491,7 +492,7 @@ def execution_state_machine(
     execution_id: str = "",
     initial: ExecutionStatus = ExecutionStatus.CREATED,
     callback: Callable[[TransitionEvent], Awaitable[None]] | None = None,
-) -> "StateMachine[ExecutionStatus]":
+) -> StateMachine[ExecutionStatus]:
     """Create a ``StateMachine`` pre-configured for execution lifecycle.
 
     Parameters
@@ -523,7 +524,7 @@ def agent_state_machine(
     agent_id: str,
     initial: AgentStatus,
     callback: Callable[[TransitionEvent], Awaitable[None]] | None = None,
-) -> "StateMachine[AgentStatus]":
+) -> StateMachine[AgentStatus]:
     """Create a ``StateMachine`` pre-configured for agent lifecycle.
 
     Parameters
@@ -552,7 +553,7 @@ def tool_invocation_state_machine(
     invocation_id: str,
     initial: ToolInvocationStatus,
     callback: Callable[[TransitionEvent], Awaitable[None]] | None = None,
-) -> "StateMachine[ToolInvocationStatus]":
+) -> StateMachine[ToolInvocationStatus]:
     """Create a ``StateMachine`` pre-configured for tool-invocation lifecycle.
 
     Parameters

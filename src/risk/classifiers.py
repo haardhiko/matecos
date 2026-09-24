@@ -93,7 +93,7 @@ def classify_prompt_injection(
 
 _EXFIL_PATTERNS = [
     r"https?://\d+\.\d+\.\d+\.\d+",  # IP-based URLs
-    r"https?://[a-z0-9]+\.ngrok",     # ngrok tunnels
+    r"https?://[a-z0-9]+\.ngrok",  # ngrok tunnels
     r"ftp://",
     r"curl\s+",
     r"wget\s+",

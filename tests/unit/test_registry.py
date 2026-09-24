@@ -15,8 +15,6 @@ from src.tools.manifests import (
     ToolManifest,
 )
 from src.tools.registry import (
-    ToolExecutionContext,
-    ToolExecutionResult,
     ToolRegistry,
     ToolSearchQuery,
 )
@@ -72,16 +70,10 @@ class TestToolRegistry:
     @pytest.mark.asyncio
     async def test_search_by_capability(self) -> None:
         registry = ToolRegistry()
-        registry.register(
-            _make_manifest("math.calculator", capabilities=["calculation"])
-        )
-        registry.register(
-            _make_manifest("data.csv.profile", capabilities=["csv_processing"])
-        )
+        registry.register(_make_manifest("math.calculator", capabilities=["calculation"]))
+        registry.register(_make_manifest("data.csv.profile", capabilities=["csv_processing"]))
 
-        results = await registry.search(
-            ToolSearchQuery(capabilities=["calculation"])
-        )
+        results = await registry.search(ToolSearchQuery(capabilities=["calculation"]))
         assert len(results) == 1
         assert results[0].tool_id == "math.calculator"
 
@@ -91,9 +83,7 @@ class TestToolRegistry:
         registry.register(_make_manifest("safe.tool", risk_level="low"))
         registry.register(_make_manifest("risky.tool", risk_level="high"))
 
-        results = await registry.search(
-            ToolSearchQuery(max_risk_level="medium")
-        )
+        results = await registry.search(ToolSearchQuery(max_risk_level="medium"))
         assert len(results) == 1
         assert results[0].tool_id == "safe.tool"
 
@@ -104,9 +94,7 @@ class TestToolRegistry:
         registry.register(_make_manifest("math.statistics"))
         registry.register(_make_manifest("data.csv.profile"))
 
-        results = await registry.search(
-            ToolSearchQuery(name_pattern="math.*")
-        )
+        results = await registry.search(ToolSearchQuery(name_pattern="math.*"))
         assert len(results) == 2
 
     @pytest.mark.asyncio

@@ -6,14 +6,14 @@ Tests for the memory subsystem: event store, working memory, episodic memory.
 
 from __future__ import annotations
 
-import pytest
 from datetime import UTC, datetime, timedelta
 
-from src.memory.event_store import EventStore
-from src.memory.working_memory import WorkingMemory
-from src.memory.episodic_memory import Episode, EpisodicMemoryStore
-from src.memory.retention import RetentionPolicy
+import pytest
 
+from src.memory.episodic_memory import Episode, EpisodicMemoryStore
+from src.memory.event_store import EventStore
+from src.memory.retention import RetentionPolicy
+from src.memory.working_memory import WorkingMemory
 
 # ===========================================================================
 # Event Store
@@ -130,16 +130,20 @@ class TestEpisodicMemory:
     @pytest.mark.asyncio
     async def test_search_by_keywords(self) -> None:
         store = EpisodicMemoryStore()
-        await store.store(Episode(
-            execution_id="exec-1",
-            goal="Analyse sales data for Q4",
-            outcome="COMPLETED",
-        ))
-        await store.store(Episode(
-            execution_id="exec-2",
-            goal="Write a report about marketing",
-            outcome="COMPLETED",
-        ))
+        await store.store(
+            Episode(
+                execution_id="exec-1",
+                goal="Analyse sales data for Q4",
+                outcome="COMPLETED",
+            )
+        )
+        await store.store(
+            Episode(
+                execution_id="exec-2",
+                goal="Write a report about marketing",
+                outcome="COMPLETED",
+            )
+        )
 
         results = await store.search(keywords=["sales"])
         assert len(results) == 1
@@ -158,16 +162,20 @@ class TestEpisodicMemory:
     @pytest.mark.asyncio
     async def test_search_by_tools(self) -> None:
         store = EpisodicMemoryStore()
-        await store.store(Episode(
-            execution_id="e1",
-            goal="A",
-            tools_used=["web.search"],
-        ))
-        await store.store(Episode(
-            execution_id="e2",
-            goal="B",
-            tools_used=["math.calculator"],
-        ))
+        await store.store(
+            Episode(
+                execution_id="e1",
+                goal="A",
+                tools_used=["web.search"],
+            )
+        )
+        await store.store(
+            Episode(
+                execution_id="e2",
+                goal="B",
+                tools_used=["math.calculator"],
+            )
+        )
 
         results = await store.search(tools_used=["web.search"])
         assert len(results) == 1

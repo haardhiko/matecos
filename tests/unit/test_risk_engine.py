@@ -16,13 +16,11 @@ from src.risk.classifiers import (
     classify_sandbox_escape,
 )
 from src.risk.engine import (
-    DEFAULT_POLICY,
     RiskDecision,
     RiskEngine,
     RiskPolicy,
 )
-from src.risk.policies import get_risk_policy, POLICY_MAP
-
+from src.risk.policies import POLICY_MAP, get_risk_policy
 
 # ===========================================================================
 # Classifiers

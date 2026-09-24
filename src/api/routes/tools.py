@@ -104,10 +104,7 @@ async def list_tools(
 
     # Capability filter — tool must declare ALL requested capabilities
     if query.capabilities:
-        tools = [
-            t for t in tools
-            if all(cap in t.capabilities for cap in query.capabilities)
-        ]
+        tools = [t for t in tools if all(cap in t.capabilities for cap in query.capabilities)]
 
     # Risk ceiling
     if query.risk_level_max:
@@ -124,10 +121,7 @@ async def list_tools(
     # Free-text filter (simple substring match against name + description)
     if query.text:
         needle = query.text.lower()
-        tools = [
-            t for t in tools
-            if needle in t.name.lower() or needle in t.description.lower()
-        ]
+        tools = [t for t in tools if needle in t.name.lower() or needle in t.description.lower()]
 
     total = len(tools)
 

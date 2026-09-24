@@ -7,7 +7,6 @@ Secrets management — safe storage and access to sensitive credentials.
 from __future__ import annotations
 
 import os
-from typing import Any
 
 import structlog
 

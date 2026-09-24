@@ -10,7 +10,6 @@ enforces concurrency limits, and spawns agent executions.
 from __future__ import annotations
 
 import asyncio
-from typing import Any
 
 import structlog
 import ulid
@@ -139,9 +138,7 @@ class Scheduler:
                         results[completed_tid] = result
 
                         if result.status == "COMPLETED":
-                            graph.mark_completed(
-                                completed_tid, result.result or {}
-                            )
+                            graph.mark_completed(completed_tid, result.result or {})
                             self._log.info(
                                 "scheduler.task_completed",
                                 task_id=completed_tid,
