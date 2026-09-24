@@ -12,10 +12,8 @@ checks before touching any file bytes.
 from __future__ import annotations
 
 import csv
-import io
 import os
 import urllib.parse
-from collections import Counter
 from typing import TYPE_CHECKING
 
 import structlog
@@ -194,7 +192,7 @@ def _profile_column(name: str, values: list[str]) -> ColumnProfile:
             col_max = max(nums)
             col_mean = sum(nums) / len(nums)
             variance = sum((x - col_mean) ** 2 for x in nums) / len(nums)
-            col_std = variance ** 0.5
+            col_std = variance**0.5
         except ValueError:
             pass
     elif dtype == "string" and non_null:
@@ -232,9 +230,7 @@ def _generate_quality_warnings(
 
     for col in columns:
         if col.null_pct > 50.0:
-            warnings.append(
-                f"Column '{col.name}' has {col.null_pct:.1f}% missing values."
-            )
+            warnings.append(f"Column '{col.name}' has {col.null_pct:.1f}% missing values.")
         if col.dtype == "empty":
             warnings.append(f"Column '{col.name}' contains only empty values.")
         if col.unique_count == 1 and col.null_count == 0:
@@ -252,7 +248,7 @@ def _generate_quality_warnings(
 
 async def csv_profile_handler(
     payload: dict,
-    context: "ToolExecutionContext",
+    context: ToolExecutionContext,
 ) -> dict:
     """
     Profile a CSV file and return schema, distributions, missing values, and quality warnings.
@@ -291,7 +287,7 @@ async def csv_profile_handler(
 
     # Read CSV using stdlib csv module (pandas not available in builtin context)
     try:
-        with open(resolved_path, "r", encoding="utf-8", errors="replace", newline="") as fh:
+        with open(resolved_path, encoding="utf-8", errors="replace", newline="") as fh:
             reader = csv.DictReader(fh)
             if reader.fieldnames is None:
                 raise ValueError("CSV file has no headers or is empty.")
@@ -377,16 +373,32 @@ def get_manifest() -> ToolManifest:
         output_schema={
             "$schema": "https://json-schema.org/draft/2020-12/schema",
             "type": "object",
-            "required": ["columns", "row_count", "sample_count", "quality_warnings", "file_size_bytes"],
+            "required": [
+                "columns",
+                "row_count",
+                "sample_count",
+                "quality_warnings",
+                "file_size_bytes",
+            ],
             "properties": {
                 "columns": {
                     "type": "array",
                     "items": {
                         "type": "object",
-                        "required": ["name", "dtype", "null_count", "null_pct", "unique_count", "sample_values"],
+                        "required": [
+                            "name",
+                            "dtype",
+                            "null_count",
+                            "null_pct",
+                            "unique_count",
+                            "sample_values",
+                        ],
                         "properties": {
                             "name": {"type": "string"},
-                            "dtype": {"type": "string", "enum": ["integer", "float", "boolean", "string", "empty"]},
+                            "dtype": {
+                                "type": "string",
+                                "enum": ["integer", "float", "boolean", "string", "empty"],
+                            },
                             "null_count": {"type": "integer", "minimum": 0},
                             "null_pct": {"type": "number", "minimum": 0, "maximum": 100},
                             "unique_count": {"type": "integer", "minimum": 0},

@@ -24,7 +24,7 @@ class RuntimeConfig(BaseModel):
     working_dir: str | None = None
 
     @model_validator(mode="after")
-    def _validate_container_requires_image(self) -> "RuntimeConfig":
+    def _validate_container_requires_image(self) -> RuntimeConfig:
         """Container runtime must have either an image or a dockerfile_path."""
         if self.type == "container" and not self.image and not self.dockerfile_path:
             raise ValueError(
@@ -232,13 +232,11 @@ class ToolManifest(BaseModel):
             r"(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
         )
         if not re.fullmatch(pattern, v):
-            raise ValueError(
-                f"version '{v}' is not valid semver (e.g. '1.0.0', '2.3.1-alpha.1')."
-            )
+            raise ValueError(f"version '{v}' is not valid semver (e.g. '1.0.0', '2.3.1-alpha.1').")
         return v
 
     @model_validator(mode="after")
-    def _high_risk_requires_scan(self) -> "ToolManifest":
+    def _high_risk_requires_scan(self) -> ToolManifest:
         """High and critical risk tools must have passed a security scan."""
         if self.risk_level in ("high", "critical") and not self.security.scan_passed:
             raise ValueError(

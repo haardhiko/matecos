@@ -20,7 +20,6 @@ from src.tools.sandbox.runner import SandboxRunner, SandboxTimeoutError, Sandbox
 
 if TYPE_CHECKING:
     from src.tools.registry import ToolExecutionContext, ToolExecutionResult
-    from src.tools.sandbox.runner import SandboxSettings
 
 logger = structlog.get_logger(__name__)
 
@@ -107,8 +106,8 @@ class ToolExecutor:
         self,
         manifest: ToolManifest,
         payload: dict,
-        context: "ToolExecutionContext",
-    ) -> "ToolExecutionResult":
+        context: ToolExecutionContext,
+    ) -> ToolExecutionResult:
         """
         Execute a tool invocation.
 
@@ -177,7 +176,7 @@ class ToolExecutor:
                 )
             output = raw_output
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             status = "TIMED_OUT"
             error = f"Tool execution timed out after {timeout_sec:.0f}s."
             log.warning("executor.timed_out", timeout_sec=timeout_sec)
@@ -233,7 +232,7 @@ class ToolExecutor:
         self,
         manifest: ToolManifest,
         payload: dict,
-        context: "ToolExecutionContext",
+        context: ToolExecutionContext,
     ) -> dict:
         """
         Invoke a registered builtin handler function.
@@ -243,9 +242,7 @@ class ToolExecutor:
         """
         handler = self._handlers.get(manifest.tool_id)
         if handler is None:
-            raise ExecutorError(
-                f"No builtin handler registered for tool '{manifest.tool_id}'."
-            )
+            raise ExecutorError(f"No builtin handler registered for tool '{manifest.tool_id}'.")
 
         logger.debug("executor.builtin_invoke", tool_id=manifest.tool_id)
         result = await handler(payload, context)
@@ -255,7 +252,7 @@ class ToolExecutor:
         self,
         manifest: ToolManifest,
         payload: dict,
-        context: "ToolExecutionContext",
+        context: ToolExecutionContext,
     ) -> dict:
         """
         Run the tool in an ephemeral Docker container via :class:`SandboxRunner`.
@@ -274,9 +271,7 @@ class ToolExecutor:
 
         command = list(manifest.runtime.command)
         if not command:
-            raise ExecutorError(
-                f"Tool '{manifest.tool_id}' has no runtime.command configured."
-            )
+            raise ExecutorError(f"Tool '{manifest.tool_id}' has no runtime.command configured.")
 
         # env_vars contains key names only — values are injected from secret store.
         # Here we pass empty-string placeholders; the real secret store is wired in Phase 5.
@@ -302,15 +297,13 @@ class ToolExecutor:
         try:
             return json.loads(sandbox_result.stdout)
         except json.JSONDecodeError as exc:
-            raise ExecutorError(
-                f"Container stdout is not valid JSON: {exc}"
-            ) from exc
+            raise ExecutorError(f"Container stdout is not valid JSON: {exc}") from exc
 
     async def _execute_remote(
         self,
         manifest: ToolManifest,
         payload: dict,
-        context: "ToolExecutionContext",
+        context: ToolExecutionContext,
     ) -> dict:
         """
         Call an external remote tool service via HTTP POST.
@@ -362,16 +355,12 @@ class ToolExecutor:
             raise RemoteToolError("Remote tool request failed due to a network error.") from exc
 
         if response.status_code not in range(200, 300):
-            raise RemoteToolError(
-                f"Remote tool returned HTTP {response.status_code}."
-            )
+            raise RemoteToolError(f"Remote tool returned HTTP {response.status_code}.")
 
         try:
             return response.json()
         except json.JSONDecodeError as exc:
-            raise RemoteToolError(
-                "Remote tool returned non-JSON response."
-            ) from exc
+            raise RemoteToolError("Remote tool returned non-JSON response.") from exc
 
 
 # ---------------------------------------------------------------------------

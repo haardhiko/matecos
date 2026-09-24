@@ -6,27 +6,21 @@ Tests for the agents package: roles, policies, prompts, and runtime.
 
 from __future__ import annotations
 
-import json
 import pytest
-from unittest.mock import AsyncMock
 
 from src.agents.llm_interface import (
     LLMConfig,
     LLMResponse,
-    LLMUsage,
     Message,
     MockLLMAdapter,
 )
 from src.agents.policies import AgentPolicy, BudgetExhaustedError, BudgetTracker
-from src.agents.prompts import PromptRenderer, TEMPLATE_REGISTRY
-from src.agents.roles import ROLE_REGISTRY, AgentRoleSpec, get_role_spec
+from src.agents.prompts import TEMPLATE_REGISTRY, PromptRenderer
+from src.agents.roles import ROLE_REGISTRY, get_role_spec
 from src.agents.runtime import (
-    ActionDecision,
-    ActionParseError,
     AgentResult,
     AgentRuntime,
 )
-
 
 # ===========================================================================
 # Roles
@@ -39,8 +33,16 @@ class TestRoles:
     def test_all_ten_roles_registered(self) -> None:
         assert len(ROLE_REGISTRY) == 10
         expected = {
-            "planner", "researcher", "analyst", "coder", "writer",
-            "verifier", "risk_assessor", "orchestrator", "repo_analyst", "executor",
+            "planner",
+            "researcher",
+            "analyst",
+            "coder",
+            "writer",
+            "verifier",
+            "risk_assessor",
+            "orchestrator",
+            "repo_analyst",
+            "executor",
         }
         assert set(ROLE_REGISTRY.keys()) == expected
 
@@ -180,8 +182,10 @@ class TestPromptRenderer:
 
     def test_all_templates_registered(self) -> None:
         expected = {
-            "REACT_AGENT_SYSTEM", "PLANNER_SYSTEM",
-            "VERIFIER_SYSTEM", "RISK_REVIEW_SYSTEM",
+            "REACT_AGENT_SYSTEM",
+            "PLANNER_SYSTEM",
+            "VERIFIER_SYSTEM",
+            "RISK_REVIEW_SYSTEM",
         }
         assert set(TEMPLATE_REGISTRY.keys()) == expected
 
@@ -300,13 +304,15 @@ class TestAgentRuntime:
     @pytest.mark.asyncio
     async def test_complete_on_first_decision(self) -> None:
         adapter = MockLLMAdapter(
-            responses=[{
-                "decision_type": "complete",
-                "reason_summary": "Task done.",
-                "tool_id": None,
-                "tool_input": {"summary": "All good"},
-                "risk_assessment": "low",
-            }]
+            responses=[
+                {
+                    "decision_type": "complete",
+                    "reason_summary": "Task done.",
+                    "tool_id": None,
+                    "tool_input": {"summary": "All good"},
+                    "risk_assessment": "low",
+                }
+            ]
         )
         runtime = AgentRuntime(llm=adapter)
         policy = AgentPolicy(role_spec=get_role_spec("executor"))
@@ -327,11 +333,13 @@ class TestAgentRuntime:
     @pytest.mark.asyncio
     async def test_fail_on_first_decision(self) -> None:
         adapter = MockLLMAdapter(
-            responses=[{
-                "decision_type": "fail",
-                "reason_summary": "Cannot proceed.",
-                "risk_assessment": "low",
-            }]
+            responses=[
+                {
+                    "decision_type": "fail",
+                    "reason_summary": "Cannot proceed.",
+                    "risk_assessment": "low",
+                }
+            ]
         )
         runtime = AgentRuntime(llm=adapter)
         policy = AgentPolicy(role_spec=get_role_spec("executor"))
@@ -351,11 +359,13 @@ class TestAgentRuntime:
     @pytest.mark.asyncio
     async def test_budget_exhaustion(self) -> None:
         adapter = MockLLMAdapter(
-            responses=[{
-                "decision_type": "wait",
-                "reason_summary": "Waiting...",
-                "risk_assessment": "low",
-            }]
+            responses=[
+                {
+                    "decision_type": "wait",
+                    "reason_summary": "Waiting...",
+                    "risk_assessment": "low",
+                }
+            ]
         )
         runtime = AgentRuntime(llm=adapter)
         policy = AgentPolicy(role_spec=get_role_spec("executor"))
@@ -407,7 +417,5 @@ class TestAgentRuntime:
         # Should complete after being blocked, then completing
         assert result.status == "COMPLETED"
         # Check that one record shows blocked_by_policy
-        blocked = [
-            r for r in result.decision_records if r.outcome == "blocked_by_policy"
-        ]
+        blocked = [r for r in result.decision_records if r.outcome == "blocked_by_policy"]
         assert len(blocked) == 1

@@ -14,7 +14,6 @@ Fetches a URL via HTTP/HTTPS with strict security controls:
 from __future__ import annotations
 
 import ipaddress
-import re
 import socket
 import time
 import urllib.parse
@@ -47,11 +46,11 @@ DEFAULT_TIMEOUT_SECONDS: int = 30
 # Cloud metadata endpoints that must always be blocked regardless of IP checks
 BLOCKED_METADATA_HOSTNAMES: frozenset[str] = frozenset(
     {
-        "169.254.169.254",          # AWS / GCP / Azure IMDS
+        "169.254.169.254",  # AWS / GCP / Azure IMDS
         "metadata.google.internal",  # GCP metadata
         "metadata.internal",
         "instance-data",
-        "169.254.170.23",           # ECS task metadata
+        "169.254.170.23",  # ECS task metadata
     }
 )
 
@@ -61,19 +60,19 @@ _BLOCKED_NETWORKS: list[ipaddress.IPv4Network | ipaddress.IPv6Network] = [
     ipaddress.ip_network("172.16.0.0/12"),
     ipaddress.ip_network("192.168.0.0/16"),
     ipaddress.ip_network("127.0.0.0/8"),
-    ipaddress.ip_network("169.254.0.0/16"),   # link-local (AWS metadata lives here)
+    ipaddress.ip_network("169.254.0.0/16"),  # link-local (AWS metadata lives here)
     ipaddress.ip_network("0.0.0.0/8"),
-    ipaddress.ip_network("100.64.0.0/10"),    # shared address space (RFC 6598)
-    ipaddress.ip_network("192.0.0.0/24"),     # IETF protocol assignments
-    ipaddress.ip_network("198.18.0.0/15"),    # benchmarking
+    ipaddress.ip_network("100.64.0.0/10"),  # shared address space (RFC 6598)
+    ipaddress.ip_network("192.0.0.0/24"),  # IETF protocol assignments
+    ipaddress.ip_network("198.18.0.0/15"),  # benchmarking
     ipaddress.ip_network("198.51.100.0/24"),  # documentation
-    ipaddress.ip_network("203.0.113.0/24"),   # documentation
-    ipaddress.ip_network("240.0.0.0/4"),      # reserved
+    ipaddress.ip_network("203.0.113.0/24"),  # documentation
+    ipaddress.ip_network("240.0.0.0/4"),  # reserved
     # IPv6
-    ipaddress.ip_network("::1/128"),           # loopback
-    ipaddress.ip_network("fc00::/7"),          # unique local
-    ipaddress.ip_network("fe80::/10"),         # link-local
-    ipaddress.ip_network("::ffff:0:0/96"),     # IPv4-mapped
+    ipaddress.ip_network("::1/128"),  # loopback
+    ipaddress.ip_network("fc00::/7"),  # unique local
+    ipaddress.ip_network("fe80::/10"),  # link-local
+    ipaddress.ip_network("::ffff:0:0/96"),  # IPv4-mapped
 ]
 
 # Default allowed domains (empty = deny all in conservative mode)
@@ -126,8 +125,7 @@ def _check_ssrf(url: str, allowed_domains: list[str]) -> None:
     # Domain allowlist check (empty list = deny all)
     if allowed_domains:
         if not any(
-            host_lower == d.lower() or host_lower.endswith("." + d.lower())
-            for d in allowed_domains
+            host_lower == d.lower() or host_lower.endswith("." + d.lower()) for d in allowed_domains
         ):
             raise SSRFError("Host is not in the allowed domain list.")
     # If allowed_domains is empty, we're in deny-all mode — raise
@@ -161,7 +159,7 @@ def _check_ssrf(url: str, allowed_domains: list[str]) -> None:
 
 async def http_fetch_handler(
     payload: dict,
-    context: "ToolExecutionContext",
+    context: ToolExecutionContext,
 ) -> dict:
     """
     Fetch a URL and return the response.
@@ -187,9 +185,7 @@ async def http_fetch_handler(
     try:
         import httpx  # type: ignore[import]
     except ImportError as exc:
-        raise RuntimeError(
-            "httpx is not installed; run 'pip install httpx'."
-        ) from exc
+        raise RuntimeError("httpx is not installed; run 'pip install httpx'.") from exc
 
     log = logger.bind(
         tool_id="web.http_fetch",
@@ -222,13 +218,9 @@ async def http_fetch_handler(
         raise ValueError(f"HTTP method '{method}' is not allowed.")
 
     # Build safe headers (no host header injection, no hop-by-hop headers)
-    _BLOCKED_HEADERS = {
-        "host", "connection", "transfer-encoding", "upgrade", "proxy-connection"
-    }
+    _BLOCKED_HEADERS = {"host", "connection", "transfer-encoding", "upgrade", "proxy-connection"}
     safe_headers: dict[str, str] = {
-        k: v
-        for k, v in extra_headers.items()
-        if k.lower() not in _BLOCKED_HEADERS
+        k: v for k, v in extra_headers.items() if k.lower() not in _BLOCKED_HEADERS
     }
 
     start_ns = time.perf_counter_ns()
@@ -280,13 +272,17 @@ async def http_fetch_handler(
 
     # Return response headers (filtered — no hop-by-hop)
     _HOP_BY_HOP = {
-        "connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
-        "te", "trailers", "transfer-encoding", "upgrade",
+        "connection",
+        "keep-alive",
+        "proxy-authenticate",
+        "proxy-authorization",
+        "te",
+        "trailers",
+        "transfer-encoding",
+        "upgrade",
     }
     response_headers = {
-        k.lower(): v
-        for k, v in response.headers.items()
-        if k.lower() not in _HOP_BY_HOP
+        k.lower(): v for k, v in response.headers.items() if k.lower() not in _HOP_BY_HOP
     }
 
     log.info(

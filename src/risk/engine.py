@@ -177,9 +177,7 @@ class RiskEngine:
         risk_level = self._score_to_level(aggregate)
 
         # Map to decision
-        decision, controls, denial_reason = self._level_to_decision(
-            risk_level, aggregate, tool_id
-        )
+        decision, controls, denial_reason = self._level_to_decision(risk_level, aggregate, tool_id)
 
         self._log.info(
             "risk.assessed",

@@ -44,4 +44,6 @@ if __name__ == "__main__":
     registry, _ = build_default_registry()
     print(f"Successfully seeded {registry.tool_count} tools into registry:")
     for record in registry.list_all():
-        print(f" - [{record.manifest.risk_level.upper()}] {record.tool_id} (v{record.manifest.version}): {record.manifest.description}")
+        print(
+            f" - [{record.manifest.risk_level.upper()}] {record.tool_id} (v{record.manifest.version}): {record.manifest.description}"
+        )

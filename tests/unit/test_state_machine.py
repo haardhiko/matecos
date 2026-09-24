@@ -26,23 +26,19 @@ All tests carry ``pytest.mark.unit`` so they can be selected with
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
 
 from src.orchestration.state_machine import (
     AGENT_TERMINAL_STATES,
-    AGENT_TRANSITIONS,
     EXECUTION_TERMINAL_STATES,
-    EXECUTION_TRANSITIONS,
     TOOL_TERMINAL_STATES,
-    TOOL_INVOCATION_TRANSITIONS,
     AgentStatus,
     ExecutionStatus,
-    StateTransitionError,
     StateMachine,
+    StateTransitionError,
     ToolInvocationStatus,
     TransitionEvent,
     agent_state_machine,
@@ -252,11 +248,11 @@ async def test_execution_invalid_transition_raises(
 
 
 _INVALID_AGENT_TRANSITIONS: list[tuple[AgentStatus, AgentStatus, str]] = [
-    (AgentStatus.CREATED, AgentStatus.RUNNING, "task_assigned"),   # must pass READY
-    (AgentStatus.COMPLETED, AgentStatus.RUNNING, "task_assigned"), # terminal
-    (AgentStatus.FAILED, AgentStatus.READY, "initialized"),        # terminal
+    (AgentStatus.CREATED, AgentStatus.RUNNING, "task_assigned"),  # must pass READY
+    (AgentStatus.COMPLETED, AgentStatus.RUNNING, "task_assigned"),  # terminal
+    (AgentStatus.FAILED, AgentStatus.READY, "initialized"),  # terminal
     (AgentStatus.RUNNING, AgentStatus.CREATED, "initialized"),
-    (AgentStatus.READY, AgentStatus.RUNNING, "wrong_trigger"),     # bad trigger
+    (AgentStatus.READY, AgentStatus.RUNNING, "wrong_trigger"),  # bad trigger
 ]
 
 
@@ -278,11 +274,23 @@ async def test_agent_invalid_transition_raises(
 
 
 _INVALID_TOOL_TRANSITIONS: list[tuple[ToolInvocationStatus, ToolInvocationStatus, str]] = [
-    (ToolInvocationStatus.REQUESTED, ToolInvocationStatus.RUNNING, "execution_started"),  # skip risk check
-    (ToolInvocationStatus.SUCCEEDED, ToolInvocationStatus.RUNNING, "retry"),             # terminal
-    (ToolInvocationStatus.BLOCKED, ToolInvocationStatus.RUNNING, "retry"),               # terminal
-    (ToolInvocationStatus.RISK_CHECKING, ToolInvocationStatus.APPROVED, "bad_trigger"),  # wrong trigger
-    (ToolInvocationStatus.APPROVED, ToolInvocationStatus.SUCCEEDED, "execution_complete"), # skip RUNNING
+    (
+        ToolInvocationStatus.REQUESTED,
+        ToolInvocationStatus.RUNNING,
+        "execution_started",
+    ),  # skip risk check
+    (ToolInvocationStatus.SUCCEEDED, ToolInvocationStatus.RUNNING, "retry"),  # terminal
+    (ToolInvocationStatus.BLOCKED, ToolInvocationStatus.RUNNING, "retry"),  # terminal
+    (
+        ToolInvocationStatus.RISK_CHECKING,
+        ToolInvocationStatus.APPROVED,
+        "bad_trigger",
+    ),  # wrong trigger
+    (
+        ToolInvocationStatus.APPROVED,
+        ToolInvocationStatus.SUCCEEDED,
+        "execution_complete",
+    ),  # skip RUNNING
 ]
 
 
@@ -473,7 +481,7 @@ async def test_callback_called_on_success() -> None:
     assert evt.entity_type == "execution"
     assert evt.entity_id == "exec-1"
     assert isinstance(evt.timestamp, datetime)
-    assert evt.timestamp.tzinfo == timezone.utc
+    assert evt.timestamp.tzinfo == UTC
 
 
 async def test_callback_not_called_on_error() -> None:
@@ -631,7 +639,7 @@ def test_transition_event_is_frozen() -> None:
         from_state=ExecutionStatus.CREATED,
         to_state=ExecutionStatus.VALIDATING,
         trigger="start_validation",
-        timestamp=datetime.now(tz=timezone.utc),
+        timestamp=datetime.now(tz=UTC),
     )
     with pytest.raises((AttributeError, TypeError)):
         event.trigger = "mutated"  # type: ignore[misc]
@@ -645,7 +653,7 @@ def test_transition_event_default_metadata() -> None:
         from_state=AgentStatus.CREATED,
         to_state=AgentStatus.READY,
         trigger="initialized",
-        timestamp=datetime.now(tz=timezone.utc),
+        timestamp=datetime.now(tz=UTC),
     )
     assert event.metadata == {}
 
@@ -716,9 +724,7 @@ async def test_agent_retry_path() -> None:
 async def test_tool_full_happy_path() -> None:
     """Tool full happy-path: REQUESTED → RISK_CHECKING → APPROVED → RUNNING → SUCCEEDED."""
     sm = _make_tool()
-    await sm.transition(
-        ToolInvocationStatus.RISK_CHECKING, "risk_check_started"
-    )
+    await sm.transition(ToolInvocationStatus.RISK_CHECKING, "risk_check_started")
     await sm.transition(ToolInvocationStatus.APPROVED, "risk_approved")
     await sm.transition(ToolInvocationStatus.RUNNING, "execution_started")
     await sm.transition(ToolInvocationStatus.SUCCEEDED, "execution_complete")

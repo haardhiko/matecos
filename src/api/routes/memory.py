@@ -33,7 +33,9 @@ class AuditEventResponse(BaseModel):
 
     event_id: str = Field(description="Unique identifier for this audit event (ULID).")
     execution_id: str = Field(description="Parent execution this event belongs to.")
-    event_type: str = Field(description="Short, namespaced event type string, e.g. 'REQUEST_RECEIVED'.")
+    event_type: str = Field(
+        description="Short, namespaced event type string, e.g. 'REQUEST_RECEIVED'."
+    )
     user_id: str = Field(description="Identifier of the actor who triggered this event.")
     timestamp: datetime = Field(description="UTC timestamp when the event was recorded.")
     sensitivity: Literal["public", "internal"] = Field(
@@ -50,7 +52,9 @@ class TimelineEntry(BaseModel):
 
     model_config = model_config(populate_by_name=True)
 
-    sequence: int = Field(description="Monotonically increasing sequence number within the execution.")
+    sequence: int = Field(
+        description="Monotonically increasing sequence number within the execution."
+    )
     timestamp: datetime = Field(description="UTC timestamp of the event.")
     event_type: str = Field(description="Event category.")
     actor: str = Field(description="Who triggered this event: user, agent role, or system.")
@@ -83,6 +87,7 @@ def _get_execution_store() -> dict[str, dict[str, Any]]:
     if _EXECUTION_REF is None:
         try:
             from src.api.routes.requests import _EXECUTIONS  # type: ignore[import-not-found]
+
             _EXECUTION_REF = _EXECUTIONS
         except ImportError:
             _EXECUTION_REF = {}
@@ -204,8 +209,7 @@ async def get_execution_events(
 
     # Filter by sensitivity — only public/internal events are API-visible
     safe_events = [
-        e for e in raw_events
-        if e.get("sensitivity", "internal") in ("public", "internal")
+        e for e in raw_events if e.get("sensitivity", "internal") in ("public", "internal")
     ]
 
     # Optional event type filter
@@ -213,7 +217,7 @@ async def get_execution_events(
         safe_events = [e for e in safe_events if e.get("event_type") == event_type]
 
     # Apply offset + limit
-    paged = safe_events[offset: offset + limit]
+    paged = safe_events[offset : offset + limit]
 
     log.debug("memory.events", total=len(safe_events), returned=len(paged))
 
@@ -271,8 +275,7 @@ async def get_execution_timeline(
 
     # Keep only non-sensitive events for the timeline
     safe_events = [
-        e for e in raw_events
-        if e.get("sensitivity", "internal") in ("public", "internal")
+        e for e in raw_events if e.get("sensitivity", "internal") in ("public", "internal")
     ]
 
     entries: list[TimelineEntry] = []
@@ -309,7 +312,8 @@ async def get_execution_timeline(
                 actor=actor,
                 description=description,
                 metadata={
-                    k: v for k, v in event.get("data", {}).items()
+                    k: v
+                    for k, v in event.get("data", {}).items()
                     # Strip any fields that might inadvertently carry raw input
                     if k not in ("goal_text", "raw_input", "chain_of_thought", "reasoning")
                 },

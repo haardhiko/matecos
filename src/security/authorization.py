@@ -6,7 +6,7 @@ Authorization — RBAC and permission checking.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
@@ -44,15 +44,17 @@ VIEWER_ROLE = Role(
 )
 USER_ROLE = Role(
     name="user",
-    permissions=frozenset({
-        Permission.SUBMIT_REQUEST,
-        Permission.VIEW_STATUS,
-        Permission.CANCEL_EXECUTION,
-        Permission.APPROVE_ACTION,
-        Permission.REJECT_ACTION,
-        Permission.VIEW_TOOLS,
-        Permission.VIEW_MEMORY,
-    }),
+    permissions=frozenset(
+        {
+            Permission.SUBMIT_REQUEST,
+            Permission.VIEW_STATUS,
+            Permission.CANCEL_EXECUTION,
+            Permission.APPROVE_ACTION,
+            Permission.REJECT_ACTION,
+            Permission.VIEW_TOOLS,
+            Permission.VIEW_MEMORY,
+        }
+    ),
 )
 ADMIN_ROLE = Role(
     name="admin",

@@ -137,10 +137,7 @@ class ProvenanceTracker:
         Returns:
             List of provenance records.
         """
-        return [
-            r for r in self._records.values()
-            if r.execution_id == execution_id
-        ]
+        return [r for r in self._records.values() if r.execution_id == execution_id]
 
     @property
     def record_count(self) -> int:

@@ -301,16 +301,16 @@ class ToolRegistry:
         if record.avg_latency_ms == 0.0:
             record.avg_latency_ms = latency_ms
         else:
-            record.avg_latency_ms = (
-                alpha * latency_ms + (1 - alpha) * record.avg_latency_ms
-            )
+            record.avg_latency_ms = alpha * latency_ms + (1 - alpha) * record.avg_latency_ms
 
     # ------------------------------------------------------------------
     # Resolve tools for an agent
     # ------------------------------------------------------------------
 
     def resolve_tools_for_patterns(
-        self, allowed_patterns: list[str], denied_patterns: list[str] | None = None,
+        self,
+        allowed_patterns: list[str],
+        denied_patterns: list[str] | None = None,
     ) -> frozenset[str]:
         """Resolve glob patterns to a concrete set of tool IDs.
 

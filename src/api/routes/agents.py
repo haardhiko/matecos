@@ -20,7 +20,7 @@ router = APIRouter(prefix="/v1/agents", tags=["Agents"])
 # ---------------------------------------------------------------------------
 
 # These are populated by the orchestration layer during execution.
-_AGENT_STORE: dict[str, dict[str, Any]] = {}   # agent_id -> agent record
+_AGENT_STORE: dict[str, dict[str, Any]] = {}  # agent_id -> agent record
 _DECISION_STORE: dict[str, list[dict[str, Any]]] = {}  # agent_id -> decisions
 
 

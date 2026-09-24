@@ -1,8 +1,9 @@
 """Redis Streams-based queue with consumer groups and dead-letter handling."""
+
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import redis.asyncio as aioredis
@@ -120,9 +121,7 @@ class QueueManager:
             for _stream, entries in raw:
                 for msg_id, fields in entries:
                     payload = {k: self._try_parse_json(v) for k, v in fields.items()}
-                    messages.append(
-                        QueueMessage(stream=stream, msg_id=msg_id, payload=payload)
-                    )
+                    messages.append(QueueMessage(stream=stream, msg_id=msg_id, payload=payload))
         return messages
 
     async def ack(self, stream: str, group: str, msg_id: str) -> None:
@@ -143,7 +142,12 @@ class QueueManager:
         self, stream: str, msg_id: str, payload: dict[str, Any], reason: str
     ) -> None:
         """Move a failed message to the DLQ stream with failure metadata."""
-        dlq_payload = {**payload, "original_stream": stream, "original_id": msg_id, "failure_reason": reason}
+        dlq_payload = {
+            **payload,
+            "original_stream": stream,
+            "original_id": msg_id,
+            "failure_reason": reason,
+        }
         await self.enqueue(f"{stream}{DLQ_SUFFIX}", dlq_payload)
         logger.warning("queue.dead_lettered", stream=stream, msg_id=msg_id, reason=reason)
 

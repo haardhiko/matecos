@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class RiskLevel(str, Enum):
@@ -66,7 +66,8 @@ class ProposedAction(BaseModel):
         description="task_id of the task that triggered this action, if applicable.",
     )
     delegation_depth: int = Field(
-        default=0, ge=0,
+        default=0,
+        ge=0,
         description="Number of delegation hops from the root orchestrator to the requesting agent.",
     )
 
@@ -76,9 +77,12 @@ class RiskFactor(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    factor: str = Field(description="Short identifier for this risk factor, e.g. 'external_network_access'.")
+    factor: str = Field(
+        description="Short identifier for this risk factor, e.g. 'external_network_access'."
+    )
     weight: float = Field(
-        ge=0.0, le=1.0,
+        ge=0.0,
+        le=1.0,
         description="Relative contribution of this factor to the overall risk score (0.0–1.0).",
     )
     description: str = Field(description="Human-readable explanation of why this factor applies.")
@@ -89,14 +93,18 @@ class RiskDecision(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    risk_assessment_id: str = Field(description="Unique identifier for this risk assessment record.")
+    risk_assessment_id: str = Field(
+        description="Unique identifier for this risk assessment record."
+    )
     execution_id: str = Field(description="Parent execution context.")
     action: str = Field(description="Normalised string representation of the assessed action.")
     tool_id: str | None = Field(
         default=None,
         description="tool_id when the assessed action involves a tool invocation.",
     )
-    risk_level: RiskLevel = Field(description="Aggregate risk classification for the assessed action.")
+    risk_level: RiskLevel = Field(
+        description="Aggregate risk classification for the assessed action."
+    )
     factors: list[RiskFactor] = Field(
         default_factory=list,
         description="Ordered list of risk factors that contributed to the decision.",
@@ -132,11 +140,14 @@ class RiskContext(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    user_id: str = Field(description="Identifier of the user who initiated the top-level execution.")
+    user_id: str = Field(
+        description="Identifier of the user who initiated the top-level execution."
+    )
     execution_id: str = Field(description="Identifier of the active execution.")
     agent_id: str = Field(description="Identifier of the agent requesting the risk assessment.")
     delegation_depth: int = Field(
-        default=0, ge=0,
+        default=0,
+        ge=0,
         description="Delegation depth of the requesting agent within the execution hierarchy.",
     )
     previous_risk_decisions: list[str] = Field(
@@ -144,7 +155,8 @@ class RiskContext(BaseModel):
         description="risk_assessment_ids of earlier decisions made within this execution.",
     )
     accumulated_risk_score: float = Field(
-        default=0.0, ge=0.0,
+        default=0.0,
+        ge=0.0,
         description="Running total of risk scores from all prior decisions in this execution.",
     )
     data_sensitivity: str = Field(

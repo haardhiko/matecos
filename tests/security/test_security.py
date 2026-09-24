@@ -6,12 +6,11 @@ Security tests covering authorization (RBAC), secrets management, and container 
 
 from __future__ import annotations
 
-import os
 import pytest
 
-from src.security.authorization import AuthorizationService, Permission, ROLE_MAP
-from src.security.isolation import IsolationManager, IsolationPolicy, STRICT_ISOLATION
-from src.security.secrets import SecretsManager, SecretNotFoundError
+from src.security.authorization import AuthorizationService, Permission
+from src.security.isolation import IsolationManager
+from src.security.secrets import SecretNotFoundError, SecretsManager
 
 
 class TestAuthorization:

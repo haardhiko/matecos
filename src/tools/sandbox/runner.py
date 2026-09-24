@@ -13,7 +13,6 @@ Every container spawned here is:
 from __future__ import annotations
 
 import asyncio
-import io
 import json
 import time
 from typing import TYPE_CHECKING
@@ -129,8 +128,9 @@ class SandboxRunner:
         Raises :class:`SandboxUnavailableError` if Docker is not reachable.
         """
         try:
-            import docker  # type: ignore[import]
             import uuid
+
+            import docker  # type: ignore[import]
 
             self._session_id = str(uuid.uuid4())
             loop = asyncio.get_event_loop()
@@ -194,9 +194,7 @@ class SandboxRunner:
             )
             for container in containers:
                 try:
-                    await loop.run_in_executor(
-                        None, lambda c=container: c.remove(force=True)
-                    )
+                    await loop.run_in_executor(None, lambda c=container: c.remove(force=True))
                     logger.info(
                         "sandbox_runner.stale_container_removed",
                         container_id=container.short_id,
@@ -301,7 +299,7 @@ class SandboxRunner:
                     loop.run_in_executor(None, container.wait),
                     timeout=timeout_sec,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 log.warning("sandbox_runner.container_timeout")
                 await loop.run_in_executor(None, lambda: container.kill())
                 raise SandboxTimeoutError(
@@ -352,9 +350,7 @@ class SandboxRunner:
             # Always remove the container
             if container is not None:
                 try:
-                    await loop.run_in_executor(
-                        None, lambda: container.remove(force=True)
-                    )
+                    await loop.run_in_executor(None, lambda: container.remove(force=True))
                 except Exception:
                     pass  # best-effort cleanup
 
@@ -362,7 +358,9 @@ class SandboxRunner:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    async def _collect_stats(self, container: object, loop: asyncio.AbstractEventLoop) -> SandboxResourceUsage:
+    async def _collect_stats(
+        self, container: object, loop: asyncio.AbstractEventLoop
+    ) -> SandboxResourceUsage:
         """
         Collect resource usage from a finished container.
 
@@ -375,16 +373,13 @@ class SandboxRunner:
                 lambda: container.stats(stream=False),  # type: ignore[union-attr]
             )
             # CPU: calculate from cpu_stats delta
-            cpu_delta = (
-                stats.get("cpu_stats", {}).get("cpu_usage", {}).get("total_usage", 0)
-                - stats.get("precpu_stats", {}).get("cpu_usage", {}).get("total_usage", 0)
-            )
+            cpu_delta = stats.get("cpu_stats", {}).get("cpu_usage", {}).get(
+                "total_usage", 0
+            ) - stats.get("precpu_stats", {}).get("cpu_usage", {}).get("total_usage", 0)
             cpu_seconds = cpu_delta / 1e9  # nanoseconds → seconds
 
             # Memory: usage_in_bytes at peak
-            memory_bytes = (
-                stats.get("memory_stats", {}).get("max_usage", 0)
-            )
+            memory_bytes = stats.get("memory_stats", {}).get("max_usage", 0)
             memory_mb = memory_bytes / (1024 * 1024)
 
             return SandboxResourceUsage(

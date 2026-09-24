@@ -1,4 +1,5 @@
 """SQLAlchemy ORM models for MATECOS — all tables in one module."""
+
 from __future__ import annotations
 
 import enum
@@ -21,7 +22,6 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.infrastructure.database import Base
-
 
 # ── Enums ─────────────────────────────────────────────────────────────────────
 
@@ -124,7 +124,9 @@ class Execution(Base):
     user_id: Mapped[str] = mapped_column(String(256), nullable=False)
     goal_text: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[ExecutionStatusEnum] = mapped_column(
-        Enum(ExecutionStatusEnum, name="execution_status"), nullable=False, default=ExecutionStatusEnum.CREATED
+        Enum(ExecutionStatusEnum, name="execution_status"),
+        nullable=False,
+        default=ExecutionStatusEnum.CREATED,
     )
     plan_id: Mapped[str | None] = mapped_column(String(26), nullable=True)
     idempotency_key: Mapped[str | None] = mapped_column(String(256), nullable=True, unique=True)
@@ -133,19 +135,33 @@ class Execution(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     constraints: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     result: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
-    metadata_: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict, name="metadata")
+    metadata_: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, name="metadata"
+    )
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
-    tasks: Mapped[list["Task"]] = relationship("Task", back_populates="execution", cascade="all, delete-orphan")
-    agents: Mapped[list["AgentRecord"]] = relationship("AgentRecord", back_populates="execution", cascade="all, delete-orphan")
-    audit_events: Mapped[list["AuditEvent"]] = relationship("AuditEvent", back_populates="execution", cascade="all, delete-orphan")
-    approval_requests: Mapped[list["ApprovalRequest"]] = relationship("ApprovalRequest", back_populates="execution", cascade="all, delete-orphan")
+    tasks: Mapped[list[Task]] = relationship(
+        "Task", back_populates="execution", cascade="all, delete-orphan"
+    )
+    agents: Mapped[list[AgentRecord]] = relationship(
+        "AgentRecord", back_populates="execution", cascade="all, delete-orphan"
+    )
+    audit_events: Mapped[list[AuditEvent]] = relationship(
+        "AuditEvent", back_populates="execution", cascade="all, delete-orphan"
+    )
+    approval_requests: Mapped[list[ApprovalRequest]] = relationship(
+        "ApprovalRequest", back_populates="execution", cascade="all, delete-orphan"
+    )
 
 
 class Task(Base):
@@ -159,26 +175,36 @@ class Task(Base):
     )
 
     id: Mapped[str] = mapped_column(String(26), primary_key=True)
-    execution_id: Mapped[str] = mapped_column(String(26), ForeignKey("executions.id", ondelete="CASCADE"), nullable=False)
+    execution_id: Mapped[str] = mapped_column(
+        String(26), ForeignKey("executions.id", ondelete="CASCADE"), nullable=False
+    )
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     role: Mapped[str] = mapped_column(String(64), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="PENDING")
     dependencies: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
     required_capabilities: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
     acceptance_criteria: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
-    assigned_agent_id: Mapped[str | None] = mapped_column(String(26), ForeignKey("agents.id", ondelete="SET NULL"), nullable=True)
+    assigned_agent_id: Mapped[str | None] = mapped_column(
+        String(26), ForeignKey("agents.id", ondelete="SET NULL"), nullable=True
+    )
     result: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     max_retries: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
-    metadata_: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict, name="metadata")
+    metadata_: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, name="metadata"
+    )
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    execution: Mapped["Execution"] = relationship("Execution", back_populates="tasks")
+    execution: Mapped[Execution] = relationship("Execution", back_populates="tasks")
 
 
 class AgentRecord(Base):
@@ -192,9 +218,15 @@ class AgentRecord(Base):
     )
 
     id: Mapped[str] = mapped_column(String(26), primary_key=True)
-    execution_id: Mapped[str] = mapped_column(String(26), ForeignKey("executions.id", ondelete="CASCADE"), nullable=False)
-    task_id: Mapped[str | None] = mapped_column(String(26), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)
-    parent_agent_id: Mapped[str | None] = mapped_column(String(26), ForeignKey("agents.id", ondelete="SET NULL"), nullable=True)
+    execution_id: Mapped[str] = mapped_column(
+        String(26), ForeignKey("executions.id", ondelete="CASCADE"), nullable=False
+    )
+    task_id: Mapped[str | None] = mapped_column(
+        String(26), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
+    )
+    parent_agent_id: Mapped[str | None] = mapped_column(
+        String(26), ForeignKey("agents.id", ondelete="SET NULL"), nullable=True
+    )
     role: Mapped[str] = mapped_column(String(64), nullable=False)
     status: Mapped[AgentStatusEnum] = mapped_column(
         Enum(AgentStatusEnum, name="agent_status"), nullable=False, default=AgentStatusEnum.CREATED
@@ -211,15 +243,23 @@ class AgentRecord(Base):
     tool_calls_made: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     result: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    decision_records: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
+    decision_records: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list
+    )
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    execution: Mapped["Execution"] = relationship("Execution", back_populates="agents")
-    tool_invocations: Mapped[list["ToolInvocation"]] = relationship("ToolInvocation", back_populates="agent")
+    execution: Mapped[Execution] = relationship("Execution", back_populates="agents")
+    tool_invocations: Mapped[list[ToolInvocation]] = relationship(
+        "ToolInvocation", back_populates="agent"
+    )
 
 
 class ToolInvocation(Base):
@@ -235,12 +275,18 @@ class ToolInvocation(Base):
     )
 
     id: Mapped[str] = mapped_column(String(26), primary_key=True)
-    execution_id: Mapped[str] = mapped_column(String(26), ForeignKey("executions.id", ondelete="CASCADE"), nullable=False)
-    agent_id: Mapped[str] = mapped_column(String(26), ForeignKey("agents.id", ondelete="CASCADE"), nullable=False)
+    execution_id: Mapped[str] = mapped_column(
+        String(26), ForeignKey("executions.id", ondelete="CASCADE"), nullable=False
+    )
+    agent_id: Mapped[str] = mapped_column(
+        String(26), ForeignKey("agents.id", ondelete="CASCADE"), nullable=False
+    )
     tool_id: Mapped[str] = mapped_column(String(128), nullable=False)
     tool_version: Mapped[str] = mapped_column(String(32), nullable=False)
     status: Mapped[ToolInvocationStatusEnum] = mapped_column(
-        Enum(ToolInvocationStatusEnum, name="tool_invocation_status"), nullable=False, default=ToolInvocationStatusEnum.REQUESTED
+        Enum(ToolInvocationStatusEnum, name="tool_invocation_status"),
+        nullable=False,
+        default=ToolInvocationStatusEnum.REQUESTED,
     )
     input_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     output_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
@@ -255,13 +301,17 @@ class ToolInvocation(Base):
     retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     idempotency_key: Mapped[str | None] = mapped_column(String(256), nullable=True)
     resource_usage: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
-    metadata_: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict, name="metadata")
+    metadata_: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, name="metadata"
+    )
 
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
-    agent: Mapped["AgentRecord"] = relationship("AgentRecord", back_populates="tool_invocations")
+    agent: Mapped[AgentRecord] = relationship("AgentRecord", back_populates="tool_invocations")
 
 
 class AuditEvent(Base):
@@ -282,22 +332,32 @@ class AuditEvent(Base):
     )
 
     id: Mapped[str] = mapped_column(String(26), primary_key=True)
-    execution_id: Mapped[str | None] = mapped_column(String(26), ForeignKey("executions.id", ondelete="CASCADE"), nullable=True)
+    execution_id: Mapped[str | None] = mapped_column(
+        String(26), ForeignKey("executions.id", ondelete="CASCADE"), nullable=True
+    )
     task_id: Mapped[str | None] = mapped_column(String(26), nullable=True)
     agent_id: Mapped[str | None] = mapped_column(String(26), nullable=True)
     tool_invocation_id: Mapped[str | None] = mapped_column(String(26), nullable=True)
-    parent_event_id: Mapped[str | None] = mapped_column(String(26), ForeignKey("audit_events.id"), nullable=True)
+    parent_event_id: Mapped[str | None] = mapped_column(
+        String(26), ForeignKey("audit_events.id"), nullable=True
+    )
     event_type: Mapped[str] = mapped_column(String(64), nullable=False)
-    actor_type: Mapped[str] = mapped_column(String(32), nullable=False)  # user | agent | system | tool
+    actor_type: Mapped[str] = mapped_column(
+        String(32), nullable=False
+    )  # user | agent | system | tool
     actor_id: Mapped[str] = mapped_column(String(256), nullable=False)
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
-    sensitivity: Mapped[str] = mapped_column(String(32), nullable=False, default="internal")  # public | internal | sensitive
+    sensitivity: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="internal"
+    )  # public | internal | sensitive
     trace_id: Mapped[str] = mapped_column(String(64), nullable=False, default="")
     span_id: Mapped[str] = mapped_column(String(32), nullable=False, default="")
     request_id: Mapped[str] = mapped_column(String(32), nullable=False, default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
-    execution: Mapped["Execution | None"] = relationship("Execution", back_populates="audit_events")
+    execution: Mapped[Execution | None] = relationship("Execution", back_populates="audit_events")
 
 
 class ApprovalRequest(Base):
@@ -310,18 +370,24 @@ class ApprovalRequest(Base):
     )
 
     id: Mapped[str] = mapped_column(String(26), primary_key=True)
-    execution_id: Mapped[str] = mapped_column(String(26), ForeignKey("executions.id", ondelete="CASCADE"), nullable=False)
+    execution_id: Mapped[str] = mapped_column(
+        String(26), ForeignKey("executions.id", ondelete="CASCADE"), nullable=False
+    )
     agent_id: Mapped[str | None] = mapped_column(String(26), nullable=True)
     action_description: Mapped[str] = mapped_column(Text, nullable=False)
     risk_level: Mapped[str] = mapped_column(String(16), nullable=False)
     risk_assessment_id: Mapped[str | None] = mapped_column(String(26), nullable=True)
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")  # pending | approved | rejected
-    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="pending"
+    )  # pending | approved | rejected
+    requested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     resolved_by: Mapped[str | None] = mapped_column(String(256), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    execution: Mapped["Execution"] = relationship("Execution", back_populates="approval_requests")
+    execution: Mapped[Execution] = relationship("Execution", back_populates="approval_requests")
 
 
 class ToolRecord(Base):
@@ -352,8 +418,12 @@ class ToolRecord(Base):
     owner: Mapped[str] = mapped_column(String(256), nullable=False, default="system")
     is_available: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     manifest_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
-    registered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    registered_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
 
 class EpisodicMemory(Base):
@@ -366,19 +436,25 @@ class EpisodicMemory(Base):
     )
 
     id: Mapped[str] = mapped_column(String(26), primary_key=True)
-    execution_id: Mapped[str] = mapped_column(String(26), ForeignKey("executions.id", ondelete="CASCADE"), nullable=False, unique=True)
+    execution_id: Mapped[str] = mapped_column(
+        String(26), ForeignKey("executions.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
     user_id: Mapped[str] = mapped_column(String(256), nullable=False)
     objective: Mapped[str] = mapped_column(Text, nullable=False)
     key_decisions: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
     tools_used: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
     result_summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
     failures: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
-    verification_status: Mapped[str] = mapped_column(String(32), nullable=False, default="unverified")
+    verification_status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="unverified"
+    )
     quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     lessons: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
     sensitivity: Mapped[str] = mapped_column(String(32), nullable=False, default="internal")
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
@@ -393,10 +469,16 @@ class WorkingMemorySnapshot(Base):
     )
 
     id: Mapped[str] = mapped_column(String(26), primary_key=True)
-    execution_id: Mapped[str] = mapped_column(String(26), ForeignKey("executions.id", ondelete="CASCADE"), nullable=False)
+    execution_id: Mapped[str] = mapped_column(
+        String(26), ForeignKey("executions.id", ondelete="CASCADE"), nullable=False
+    )
     agent_id: Mapped[str | None] = mapped_column(String(26), nullable=True)
-    snapshot_type: Mapped[str] = mapped_column(String(32), nullable=False)  # context | state | result
+    snapshot_type: Mapped[str] = mapped_column(
+        String(32), nullable=False
+    )  # context | state | result
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     token_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

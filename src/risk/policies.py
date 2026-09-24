@@ -59,7 +59,5 @@ def get_risk_policy(name: str) -> RiskPolicy:
     """
     key = name.lower()
     if key not in POLICY_MAP:
-        raise KeyError(
-            f"Unknown risk policy '{name}'. Available: {sorted(POLICY_MAP.keys())}"
-        )
+        raise KeyError(f"Unknown risk policy '{name}'. Available: {sorted(POLICY_MAP.keys())}")
     return POLICY_MAP[key]

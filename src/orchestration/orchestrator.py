@@ -21,7 +21,6 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import structlog
-import ulid
 
 from src.agents.llm_interface import LLMProvider
 from src.agents.prompts import PromptRenderer
@@ -30,7 +29,6 @@ from src.orchestration.planner import Planner, PlanningError
 from src.orchestration.scheduler import Scheduler
 from src.orchestration.state_machine import (
     ExecutionStatus,
-    StateMachine,
     create_execution_state_machine,
 )
 from src.orchestration.task_graph import TaskGraph
@@ -174,9 +172,7 @@ class Orchestrator:
 
             # Aggregate results
             total_cost = sum(r.total_cost_usd for r in task_results.values())
-            all_completed = all(
-                r.status == "COMPLETED" for r in task_results.values()
-            )
+            all_completed = all(r.status == "COMPLETED" for r in task_results.values())
 
             if all_completed:
                 aggregated_result = self._aggregate_results(task_results)
@@ -233,9 +229,7 @@ class Orchestrator:
                 total_duration_ms=self._elapsed_ms(start_ns),
             )
 
-    def _aggregate_results(
-        self, task_results: dict[str, AgentResult]
-    ) -> dict[str, Any]:
+    def _aggregate_results(self, task_results: dict[str, AgentResult]) -> dict[str, Any]:
         """Aggregate individual task results into a single result dict."""
         aggregated: dict[str, Any] = {
             "tasks": {},

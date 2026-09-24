@@ -111,9 +111,7 @@ class TaskGraph:
         for node in self._nodes.values():
             for dep_id in node.dependencies:
                 if dep_id not in self._nodes:
-                    raise ValueError(
-                        f"Task '{node.task_id}' depends on unknown task '{dep_id}'"
-                    )
+                    raise ValueError(f"Task '{node.task_id}' depends on unknown task '{dep_id}'")
 
         # Cycle detection via Kahn's algorithm
         in_degree: dict[str, int] = {tid: 0 for tid in self._nodes}
@@ -283,7 +281,7 @@ class TaskGraph:
         ]
 
     @classmethod
-    def from_plan(cls, task_list: list[dict[str, Any]]) -> "TaskGraph":
+    def from_plan(cls, task_list: list[dict[str, Any]]) -> TaskGraph:
         """Build a TaskGraph from the planner's output.
 
         Args:

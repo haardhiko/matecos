@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 
 from src.agents.llm_interface import MockLLMAdapter
-from src.verification.provenance import ProvenanceTracker, ProvenanceRecord
+from src.verification.provenance import ProvenanceTracker
 from src.verification.result_checker import ResultChecker, VerificationResult
 from src.verification.validators import InputValidator, ValidationError
 
@@ -90,7 +90,11 @@ class TestResultChecker:
             "tool_input": {
                 "verdict": "pass",
                 "criteria_results": [
-                    {"criterion": "Summary exists", "passed": True, "evidence": "Found summary field"}
+                    {
+                        "criterion": "Summary exists",
+                        "passed": True,
+                        "evidence": "Found summary field",
+                    }
                 ],
                 "gaps": [],
                 "retry_recommended": False,

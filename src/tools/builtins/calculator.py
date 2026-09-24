@@ -160,9 +160,7 @@ class _SafeEvaluator(ast.NodeVisitor):
         """Allow whitelisted named constants (pi, e, tau, inf)."""
         value = _SAFE_FUNCTIONS.get(node.id)
         if value is None or callable(value):
-            raise UnsafeExpressionError(
-                f"Name '{node.id}' is not an allowed constant."
-            )
+            raise UnsafeExpressionError(f"Name '{node.id}' is not an allowed constant.")
         return value  # type: ignore[return-value]
 
     def generic_visit(self, node: ast.AST) -> _Numeric:  # type: ignore[override]
@@ -216,7 +214,7 @@ def _safe_eval(expression: str) -> _Numeric:
 
 async def calculator_handler(
     payload: dict,
-    context: "ToolExecutionContext",
+    context: ToolExecutionContext,
 ) -> dict:
     """
     Evaluate an arithmetic expression and return the result.
@@ -250,7 +248,13 @@ async def calculator_handler(
         # Normalise: if result is float but whole number, convert to int for cleanliness
         if isinstance(result, float) and result.is_integer() and not math.isinf(result):
             result = int(result)
-    except (UnsafeExpressionError, SyntaxError, ValueError, ZeroDivisionError, OverflowError) as exc:
+    except (
+        UnsafeExpressionError,
+        SyntaxError,
+        ValueError,
+        ZeroDivisionError,
+        OverflowError,
+    ) as exc:
         error = str(exc)
         log.warning("calculator.error", error=error)
     except Exception as exc:

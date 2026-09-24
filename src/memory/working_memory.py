@@ -59,9 +59,7 @@ class WorkingMemory:
 
         if self._redis:
             key = self._key(agent_id)
-            await self._redis.setex(
-                key, self._ttl_seconds, json.dumps(data)
-            )
+            await self._redis.setex(key, self._ttl_seconds, json.dumps(data))
         else:
             self._memory_store[agent_id] = data
 

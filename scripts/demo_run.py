@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+
 import ulid
 
 from scripts.seed_tools import build_default_registry
@@ -34,7 +35,9 @@ async def run_demo() -> None:
     # 2. Risk Engine
     print("\n[2/4] Initializing Risk Engine...")
     risk_engine = RiskEngine()
-    print("      Active classifiers: prompt_injection, data_exfiltration, privilege_escalation, sandbox_escape, content_safety, output_integrity.")
+    print(
+        "      Active classifiers: prompt_injection, data_exfiltration, privilege_escalation, sandbox_escape, content_safety, output_integrity."
+    )
 
     # 3. LLM & Orchestrator
     print("\n[3/4] Initializing Orchestrator with mock plan & responses...")
@@ -108,7 +111,9 @@ async def run_demo() -> None:
     print("-" * 70)
     print("TASK BREAKDOWN:")
     for task_id, task_res in result.task_results.items():
-        print(f"  * Task [{task_id}] -> Role: {task_res.role}, Status: {task_res.status}, Iterations: {task_res.total_iterations}")
+        print(
+            f"  * Task [{task_id}] -> Role: {task_res.role}, Status: {task_res.status}, Iterations: {task_res.total_iterations}"
+        )
         if task_res.result:
             print(f"    Summary: {task_res.result.get('summary')}")
 

@@ -25,7 +25,9 @@ class PaginationParams(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     page: int = Field(default=1, ge=1, description="1-based page number.")
-    page_size: int = Field(default=20, ge=1, le=100, description="Number of items per page (max 100).")
+    page_size: int = Field(
+        default=20, ge=1, le=100, description="Number of items per page (max 100)."
+    )
 
     @field_validator("page_size", mode="before")
     @classmethod

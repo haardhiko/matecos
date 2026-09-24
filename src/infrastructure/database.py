@@ -1,8 +1,9 @@
 """Async SQLAlchemy engine, session factory, and health check."""
+
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from sqlalchemy import MetaData, text
 from sqlalchemy.ext.asyncio import (

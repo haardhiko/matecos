@@ -6,8 +6,9 @@ FastAPI application entry point with lifespan management, middleware, and router
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator
+from typing import Any
 
 import structlog
 from fastapi import FastAPI, Request, status
@@ -42,6 +43,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # 1. Telemetry
     try:
         from src.infrastructure.telemetry import configure_telemetry
+
         configure_telemetry(settings)
     except Exception:
         logger.exception("app.startup.telemetry_failed")
@@ -49,6 +51,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # 2. Database
     try:
         from src.infrastructure.database import create_engine
+
         create_engine(settings)
     except Exception:
         logger.exception("app.startup.database_failed")
@@ -57,6 +60,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     queue_manager = None
     try:
         from src.infrastructure.queue import QueueManager
+
         queue_manager = QueueManager(
             redis_url=settings.redis.url,
             max_connections=settings.redis.max_connections,
@@ -70,6 +74,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     lock_manager = None
     try:
         from src.infrastructure.locks import LockManager
+
         lock_manager = LockManager(redis_url=settings.redis.url)
         await lock_manager.connect()
         app.state.lock_manager = lock_manager
@@ -90,6 +95,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     try:
         from src.infrastructure.database import _engine
+
         if _engine:
             await _engine.dispose()
     except Exception:
@@ -127,6 +133,7 @@ def create_app() -> FastAPI:
     # --- Correlation ID middleware ---
     try:
         from src.infrastructure.telemetry import CorrelationIdMiddleware
+
         app.add_middleware(CorrelationIdMiddleware)
     except ImportError:
         pass
@@ -167,18 +174,21 @@ def create_app() -> FastAPI:
     # Optional routers — fail gracefully if not yet implemented
     try:
         from src.api.routes.tools import router as tools_router
+
         app.include_router(tools_router)
     except (ImportError, Exception):
         pass
 
     try:
         from src.api.routes.agents import router as agents_router
+
         app.include_router(agents_router)
     except (ImportError, Exception):
         pass
 
     try:
         from src.api.routes.memory import router as memory_router
+
         app.include_router(memory_router)
     except (ImportError, Exception):
         pass

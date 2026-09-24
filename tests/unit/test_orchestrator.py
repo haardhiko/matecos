@@ -7,10 +7,9 @@ Unit tests for the top-level Orchestrator, Planner, and Scheduler.
 from __future__ import annotations
 
 import pytest
-from unittest.mock import AsyncMock
 
 from src.agents.llm_interface import MockLLMAdapter
-from src.orchestration.orchestrator import Orchestrator, OrchestrationResult
+from src.orchestration.orchestrator import OrchestrationResult, Orchestrator
 from src.orchestration.planner import Planner, PlanningError
 from src.orchestration.scheduler import Scheduler
 from src.orchestration.task_graph import TaskGraph, TaskNode
@@ -99,9 +98,12 @@ class TestPlanner:
         class BrokenLLM:
             async def complete(self, messages, config):
                 from src.agents.llm_interface import LLMResponse, LLMUsage
+
                 return LLMResponse(
                     content="not json",
-                    usage=LLMUsage(prompt_tokens=10, completion_tokens=5, total_tokens=15, cost_usd=0.001),
+                    usage=LLMUsage(
+                        prompt_tokens=10, completion_tokens=5, total_tokens=15, cost_usd=0.001
+                    ),
                     model="mock",
                     finish_reason="stop",
                     raw_json=None,
@@ -150,12 +152,15 @@ class TestScheduler:
         adapter = MockLLMAdapter(responses=[agent_response])
 
         from src.agents.runtime import AgentRuntime
+
         runtime = AgentRuntime(llm=adapter)
         scheduler = Scheduler(runtime=runtime, tool_registry=registry, max_concurrent=2)
 
         graph = TaskGraph()
         graph.add_node(TaskNode(task_id="t1", role="analyst", objective="Process data"))
-        graph.add_node(TaskNode(task_id="t2", role="writer", objective="Draft report", dependencies=["t1"]))
+        graph.add_node(
+            TaskNode(task_id="t2", role="writer", objective="Draft report", dependencies=["t1"])
+        )
 
         results = await scheduler.execute_graph("exec-101", graph, user_id="user-1")
         assert len(results) == 2

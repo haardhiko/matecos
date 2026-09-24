@@ -33,46 +33,70 @@ class TestTaskGraph:
     def test_validate_clean_graph(self) -> None:
         graph = TaskGraph()
         graph.add_node(TaskNode(task_id="t1", role="researcher", objective="A"))
-        graph.add_node(TaskNode(
-            task_id="t2", role="analyst", objective="B",
-            dependencies=["t1"],
-        ))
+        graph.add_node(
+            TaskNode(
+                task_id="t2",
+                role="analyst",
+                objective="B",
+                dependencies=["t1"],
+            )
+        )
         warnings = graph.validate()
         assert warnings == []
 
     def test_validate_dangling_dependency(self) -> None:
         graph = TaskGraph()
-        graph.add_node(TaskNode(
-            task_id="t1", role="researcher", objective="A",
-            dependencies=["nonexistent"],
-        ))
+        graph.add_node(
+            TaskNode(
+                task_id="t1",
+                role="researcher",
+                objective="A",
+                dependencies=["nonexistent"],
+            )
+        )
         with pytest.raises(ValueError, match="unknown task"):
             graph.validate()
 
     def test_validate_cycle_detected(self) -> None:
         graph = TaskGraph()
-        graph.add_node(TaskNode(
-            task_id="t1", role="researcher", objective="A",
-            dependencies=["t2"],
-        ))
-        graph.add_node(TaskNode(
-            task_id="t2", role="analyst", objective="B",
-            dependencies=["t1"],
-        ))
+        graph.add_node(
+            TaskNode(
+                task_id="t1",
+                role="researcher",
+                objective="A",
+                dependencies=["t2"],
+            )
+        )
+        graph.add_node(
+            TaskNode(
+                task_id="t2",
+                role="analyst",
+                objective="B",
+                dependencies=["t1"],
+            )
+        )
         with pytest.raises(CyclicDependencyError):
             graph.validate()
 
     def test_topological_sort(self) -> None:
         graph = TaskGraph()
         graph.add_node(TaskNode(task_id="t1", role="researcher", objective="A"))
-        graph.add_node(TaskNode(
-            task_id="t2", role="analyst", objective="B",
-            dependencies=["t1"],
-        ))
-        graph.add_node(TaskNode(
-            task_id="t3", role="writer", objective="C",
-            dependencies=["t2"],
-        ))
+        graph.add_node(
+            TaskNode(
+                task_id="t2",
+                role="analyst",
+                objective="B",
+                dependencies=["t1"],
+            )
+        )
+        graph.add_node(
+            TaskNode(
+                task_id="t3",
+                role="writer",
+                objective="C",
+                dependencies=["t2"],
+            )
+        )
         order = graph.topological_sort()
         assert order.index("t1") < order.index("t2")
         assert order.index("t2") < order.index("t3")
@@ -80,10 +104,14 @@ class TestTaskGraph:
     def test_get_ready_tasks(self) -> None:
         graph = TaskGraph()
         graph.add_node(TaskNode(task_id="t1", role="researcher", objective="A"))
-        graph.add_node(TaskNode(
-            task_id="t2", role="analyst", objective="B",
-            dependencies=["t1"],
-        ))
+        graph.add_node(
+            TaskNode(
+                task_id="t2",
+                role="analyst",
+                objective="B",
+                dependencies=["t1"],
+            )
+        )
 
         ready = graph.get_ready_tasks()
         assert len(ready) == 1
@@ -155,10 +183,14 @@ class TestTaskGraph:
         graph = TaskGraph()
         graph.add_node(TaskNode(task_id="t1", role="researcher", objective="A"))
         graph.add_node(TaskNode(task_id="t2", role="analyst", objective="B"))
-        graph.add_node(TaskNode(
-            task_id="t3", role="writer", objective="C",
-            dependencies=["t1", "t2"],
-        ))
+        graph.add_node(
+            TaskNode(
+                task_id="t3",
+                role="writer",
+                objective="C",
+                dependencies=["t1", "t2"],
+            )
+        )
         ready = graph.get_ready_tasks()
         assert len(ready) == 2
         ready_ids = {t.task_id for t in ready}

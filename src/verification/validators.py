@@ -6,7 +6,6 @@ Input and schema validators for MATECOS.
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 import structlog

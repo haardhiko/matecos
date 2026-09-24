@@ -10,7 +10,6 @@ discovered tool-like patterns (APIs, CLIs, scripts).
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import structlog
 
@@ -129,9 +128,7 @@ class ManifestBuilder:
             },
         )
 
-    def _build_container_manifest(
-        self, dockerfile_path: str, repo_url: str
-    ) -> ToolManifest:
+    def _build_container_manifest(self, dockerfile_path: str, repo_url: str) -> ToolManifest:
         """Build a manifest for a Dockerised tool."""
         name = Path(dockerfile_path).parent.name or "container"
         tool_id = f"github.container.{name}"

@@ -6,11 +6,9 @@ Repository cloning and workspace management.
 
 from __future__ import annotations
 
-import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Any
 
 import structlog
 

@@ -10,7 +10,6 @@ and behavioural constraints for an agent specialisation.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
 
 
 @dataclass(frozen=True)
@@ -190,7 +189,6 @@ def get_role_spec(role_name: str) -> AgentRoleSpec:
     key = role_name.lower()
     if key not in ROLE_REGISTRY:
         raise KeyError(
-            f"Unknown agent role '{role_name}'. "
-            f"Available roles: {sorted(ROLE_REGISTRY.keys())}"
+            f"Unknown agent role '{role_name}'. Available roles: {sorted(ROLE_REGISTRY.keys())}"
         )
     return ROLE_REGISTRY[key]

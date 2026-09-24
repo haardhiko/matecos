@@ -56,9 +56,7 @@ class RetentionPolicy:
         """Cutoff datetime for event archival."""
         return datetime.now(UTC) - timedelta(days=self._event_archive)
 
-    async def cleanup_episodic(
-        self, episodic_store: Any
-    ) -> int:
+    async def cleanup_episodic(self, episodic_store: Any) -> int:
         """Remove episodes older than the retention period.
 
         Args:
@@ -86,9 +84,7 @@ class RetentionPolicy:
 
         return len(to_remove)
 
-    async def cleanup_events(
-        self, session: Any = None
-    ) -> int:
+    async def cleanup_events(self, session: Any = None) -> int:
         """Archive events older than the archive period.
 
         In production, this moves old events to a cold-storage table

@@ -17,7 +17,8 @@ import ulid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.infrastructure.models import AuditEvent, EventTypeEnum as EventType
+from src.infrastructure.models import AuditEvent
+from src.infrastructure.models import EventTypeEnum as EventType
 
 logger = structlog.get_logger(__name__)
 
@@ -143,10 +144,7 @@ class EventStore:
             ]
 
         # In-memory fallback
-        filtered = [
-            e for e in self._memory_store
-            if e["execution_id"] == execution_id
-        ]
+        filtered = [e for e in self._memory_store if e["execution_id"] == execution_id]
         if event_type:
             filtered = [e for e in filtered if e["event_type"] == event_type]
         return filtered[:limit]
@@ -197,10 +195,7 @@ class EventStore:
             ]
 
         # In-memory fallback
-        filtered = [
-            e for e in self._memory_store
-            if start <= e["created_at"] <= end
-        ]
+        filtered = [e for e in self._memory_store if start <= e["created_at"] <= end]
         if event_type:
             filtered = [e for e in filtered if e["event_type"] == event_type]
         return filtered[:limit]
