@@ -193,6 +193,14 @@ def create_app() -> FastAPI:
     except (ImportError, Exception):
         pass
 
+    # Dashboard UI — serves the web interface at / and /dashboard
+    try:
+        from src.api.routes.ui import router as ui_router
+
+        app.include_router(ui_router)
+    except (ImportError, Exception):
+        pass
+
     return app
 
 
