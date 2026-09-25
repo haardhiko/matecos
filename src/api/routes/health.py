@@ -176,9 +176,13 @@ async def _probe_queue() -> ComponentHealth:
     """
     start = time.monotonic()
     try:
-        from src.infrastructure.queue import QueueManager  # type: ignore[import-not-found]
+        import redis.asyncio as aioredis
+        from src.config import get_settings
 
-        await QueueManager.health_check()
+        settings = get_settings()
+        client = aioredis.from_url(settings.redis.url, socket_connect_timeout=1.0)
+        await client.ping()
+        await client.aclose()
         latency_ms = (time.monotonic() - start) * 1000
         return ComponentHealth(name="queue", status="healthy", latency_ms=latency_ms)
     except ImportError:
