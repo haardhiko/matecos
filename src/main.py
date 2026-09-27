@@ -122,9 +122,10 @@ def create_app() -> FastAPI:
     )
 
     # --- CORS ---
+    cors_origins = settings.api_cors_origins + ["http://localhost:8000"]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.api_cors_origins,
+        allow_origins=cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -192,6 +193,20 @@ def create_app() -> FastAPI:
         app.include_router(memory_router)
     except (ImportError, Exception):
         pass
+
+    try:
+        from src.api.routes.github_tools import router as github_tools_router
+
+        app.include_router(github_tools_router)
+    except (ImportError, Exception) as e:
+        logger.error(f"Failed to load github_tools_router: {e}")
+
+    try:
+        from src.api.routes.tasks import router as tasks_router
+
+        app.include_router(tasks_router)
+    except (ImportError, Exception) as e:
+        logger.error(f"Failed to load tasks_router: {e}")
 
     # Dashboard UI — serves the web interface at / and /dashboard
     try:

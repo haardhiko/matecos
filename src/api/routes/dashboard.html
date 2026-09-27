@@ -1,583 +1,1028 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MATECOS — Control Plane</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MATECOS Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-deep: #09090b;
+            --bg-surface: #18181b;
+            --bg-surface-glass: rgba(24, 24, 27, 0.7);
+            --border: #27272a;
+            --border-hover: #3f3f46;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #22c55e;
+            --success-glow: rgba(34, 197, 94, 0.2);
+            --warning: #f59e0b;
+            --warning-glow: rgba(245, 158, 11, 0.2);
+            --error: #ef4444;
+            --error-glow: rgba(239, 68, 68, 0.2);
+            --text-main: #fafafa;
+            --text-muted: #a1a1aa;
+            --transition: 0.2s ease;
+        }
 
-    :root {
-      --bg: #0b0f1a;
-      --surface: #111827;
-      --surface-2: #1a2236;
-      --border: #1e293b;
-      --border-focus: #3b82f6;
-      --text: #e2e8f0;
-      --text-muted: #94a3b8;
-      --text-dim: #64748b;
-      --accent: #3b82f6;
-      --accent-glow: rgba(59, 130, 246, 0.15);
-      --green: #10b981;
-      --green-bg: rgba(16, 185, 129, 0.1);
-      --yellow: #f59e0b;
-      --yellow-bg: rgba(245, 158, 11, 0.1);
-      --red: #ef4444;
-      --red-bg: rgba(239, 68, 68, 0.1);
-      --purple: #8b5cf6;
-      --purple-bg: rgba(139, 92, 246, 0.1);
-      --radius: 12px;
-      --radius-sm: 8px;
-      --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
-      --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-      --mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
-    }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-    body {
-      font-family: var(--font);
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.6;
-      min-height: 100vh;
-    }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
 
-    /* Layout */
-    .shell { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
+        /* Typography */
+        h1, h2, h3, h4 { font-weight: 600; }
+        
+        /* Layout */
+        .header {
+            background-color: var(--bg-surface-glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
 
-    /* Header */
-    .header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding-bottom: 20px; border-bottom: 1px solid var(--border);
-      margin-bottom: 24px; flex-wrap: wrap; gap: 16px;
-    }
-    .header-left { display: flex; align-items: center; gap: 14px; }
-    .logo {
-      width: 44px; height: 44px; border-radius: 12px;
-      background: linear-gradient(135deg, #3b82f6, #10b981);
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 20px; color: #fff;
-      box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
-    }
-    .header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
-    .header .subtitle { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
-    .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .chip {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
-      border: 1px solid var(--border);
-    }
-    .chip-green { background: var(--green-bg); color: var(--green); border-color: rgba(16,185,129,0.25); }
-    .chip-blue { background: var(--accent-glow); color: var(--accent); border-color: rgba(59,130,246,0.25); }
-    .dot { width: 7px; height: 7px; border-radius: 50%; animation: pulse 2s infinite; }
-    .dot-green { background: var(--green); }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+        }
 
-    /* Tabs */
-    .tabs {
-      display: flex; gap: 0; border-bottom: 1px solid var(--border);
-      margin-bottom: 24px; overflow-x: auto;
-    }
-    .tab-btn {
-      background: none; border: none; color: var(--text-dim); font-size: 13px;
-      padding: 10px 18px; cursor: pointer; border-bottom: 2px solid transparent;
-      transition: all 0.2s; white-space: nowrap; font-weight: 500;
-    }
-    .tab-btn:hover { color: var(--text-muted); }
-    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
+        .logo-icon {
+            color: var(--primary);
+        }
 
-    /* Metric Cards */
-    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px; }
-    .metric-card {
-      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 18px 20px; box-shadow: var(--shadow); transition: border-color 0.2s;
-    }
-    .metric-card:hover { border-color: var(--border-focus); }
-    .metric-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-dim); font-weight: 600; }
-    .metric-value { font-size: 28px; font-weight: 700; margin-top: 6px; letter-spacing: -0.5px; }
-    .metric-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+        .nav-pills {
+            display: flex;
+            gap: 0.5rem;
+            background: var(--bg-deep);
+            padding: 0.25rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border);
+        }
 
-    /* Cards */
-    .card {
-      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-      box-shadow: var(--shadow); overflow: hidden; margin-bottom: 20px;
-    }
-    .card-header {
-      padding: 16px 20px; border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .card-title { font-size: 15px; font-weight: 600; }
-    .card-body { padding: 20px; }
+        .nav-item {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            transition: var(--transition);
+        }
 
-    /* Tables */
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th {
-      text-align: left; padding: 10px 14px; font-size: 11px; text-transform: uppercase;
-      letter-spacing: 0.7px; color: var(--text-dim); font-weight: 600;
-      border-bottom: 1px solid var(--border); background: var(--surface-2);
-    }
-    td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: rgba(59, 130, 246, 0.03); }
+        .nav-item:hover {
+            color: var(--text-main);
+        }
 
-    /* Badges */
-    .badge {
-      display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 6px;
-      font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
-    }
-    .badge-green { background: var(--green-bg); color: var(--green); }
-    .badge-yellow { background: var(--yellow-bg); color: var(--yellow); }
-    .badge-red { background: var(--red-bg); color: var(--red); }
-    .badge-blue { background: var(--accent-glow); color: var(--accent); }
-    .badge-purple { background: var(--purple-bg); color: var(--purple); }
+        .nav-item.active {
+            background-color: var(--bg-surface);
+            color: var(--text-main);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
 
-    /* Console */
-    .console {
-      background: #0a0e17; border: 1px solid var(--border); border-radius: var(--radius-sm);
-      padding: 16px 18px; font-family: var(--mono); font-size: 12.5px; line-height: 1.7;
-      color: var(--text-muted); max-height: 360px; overflow-y: auto;
-      white-space: pre-wrap; word-break: break-all;
-    }
-    .console .log-info { color: #38bdf8; }
-    .console .log-ok { color: var(--green); }
-    .console .log-warn { color: var(--yellow); }
-    .console .log-err { color: var(--red); }
-    .console .log-dim { color: var(--text-dim); }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            width: 100%;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
 
-    /* Request form */
-    .form-group { margin-bottom: 16px; }
-    .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-    textarea, input[type="text"], input[type="number"] {
-      width: 100%; padding: 10px 14px; background: var(--surface-2); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); color: var(--text); font-size: 13px; font-family: var(--font);
-      transition: border-color 0.2s; outline: none; resize: vertical;
-    }
-    textarea:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
-    .btn {
-      display: inline-flex; align-items: center; gap: 8px; padding: 10px 22px;
-      border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600;
-      cursor: pointer; transition: all 0.2s;
-    }
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-primary:hover { background: #2563eb; box-shadow: 0 0 16px var(--accent-glow); }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
-    .btn-ghost:hover { border-color: var(--text-dim); color: var(--text); }
+        .view-section {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
 
-    /* Utility */
-    .flex-between { display: flex; align-items: center; justify-content: space-between; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    .mono { font-family: var(--mono); font-size: 12px; }
-    .mt-12 { margin-top: 12px; }
-    .mb-16 { margin-bottom: 16px; }
-    .text-muted { color: var(--text-muted); }
-    .text-dim { color: var(--text-dim); font-size: 12px; }
-    .empty-state { text-align: center; padding: 48px 20px; color: var(--text-dim); }
-    .empty-state p { margin-top: 8px; }
+        .view-section.active {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
 
-    @media (max-width: 768px) {
-      .grid-2 { grid-template-columns: 1fr; }
-      .header { flex-direction: column; align-items: flex-start; }
-    }
-  </style>
+        /* Forms & Inputs */
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            background: var(--bg-surface);
+            padding: 1rem;
+            border-radius: 1rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        input {
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.95rem;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .input-lg { flex: 1; }
+        .input-sm { width: 150px; }
+
+        textarea {
+            width: 100%;
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 1rem;
+            border-radius: 0.75rem;
+            font-size: 1.1rem;
+            min-height: 120px;
+            resize: vertical;
+            outline: none;
+            transition: var(--transition);
+            font-family: inherit;
+        }
+
+        textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+        }
+
+        button:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        button.secondary {
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+        }
+        
+        button.secondary:hover {
+            background: var(--border);
+        }
+
+        button.sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        /* Tool Collection View */
+        .import-status {
+            display: none;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-top: -1rem;
+            animation: slideDown 0.3s ease;
+        }
+        
+        .import-status.active {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        .tools-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .tool-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            animation: fadeUp 0.4s ease backwards;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--border-hover);
+        }
+
+        .tool-card.risk-low { border-top: 3px solid var(--success); }
+        .tool-card.risk-medium { border-top: 3px solid var(--warning); }
+        .tool-card.risk-high { border-top: 3px solid var(--error); }
+        
+        .tool-card.risk-low:hover { box-shadow: 0 4px 20px var(--success-glow); }
+        .tool-card.risk-medium:hover { box-shadow: 0 4px 20px var(--warning-glow); }
+        .tool-card.risk-high:hover { box-shadow: 0 4px 20px var(--error-glow); }
+
+        .tool-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .tool-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-main);
+            word-break: break-all;
+        }
+
+        .tool-source {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            margin-top: 0.25rem;
+        }
+
+        .badge {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            padding: 0.2rem 0.5rem;
+            border-radius: 1rem;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-low { background: rgba(34, 197, 94, 0.1); color: var(--success); border: 1px solid rgba(34,197,94,0.2); }
+        .badge-medium { background: rgba(245, 158, 11, 0.1); color: var(--warning); border: 1px solid rgba(245,158,11,0.2); }
+        .badge-high { background: rgba(239, 68, 68, 0.1); color: var(--error); border: 1px solid rgba(239,68,68,0.2); }
+
+        .tool-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            flex-grow: 1;
+        }
+
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .tag {
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .tool-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: auto;
+            border-top: 1px solid var(--border);
+            padding-top: 1rem;
+        }
+
+        /* Task Runner View */
+        .task-input-area {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        }
+
+        .examples {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .example-pill {
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            padding: 0.3rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .example-pill:hover {
+            color: var(--text-main);
+            border-color: var(--primary);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .result-area {
+            display: none;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            overflow: hidden;
+            animation: fadeIn 0.4s ease;
+        }
+        
+        .result-area.active {
+            display: block;
+        }
+
+        .result-header {
+            background: var(--bg-deep);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .result-meta {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .tool-used-badge {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--primary);
+            border: 1px solid rgba(59,130,246,0.2);
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-weight: 500;
+        }
+
+        .result-reasoning {
+            padding: 1rem 1.5rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+            background: rgba(255,255,255,0.02);
+            font-style: italic;
+        }
+
+        .result-content {
+            padding: 1.5rem;
+        }
+
+        .result-format-calc {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--success);
+            text-align: center;
+            padding: 2rem 0;
+            font-family: monospace;
+        }
+
+        .result-format-json {
+            background: var(--bg-deep);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            color: #a8b2d1;
+        }
+
+        .result-format-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        
+        .result-format-table th, .result-format-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+
+        .result-format-table th {
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .history-section {
+            margin-top: 2rem;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .history-item {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-main {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .history-task {
+            font-weight: 500;
+        }
+
+        .history-sub {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* Modal */
+        .modal-backdrop {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .modal-backdrop.active { display: flex; }
+
+        .modal {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 2rem;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+
+        .modal h3 { margin-bottom: 1rem; }
+        .modal textarea { min-height: 80px; margin-bottom: 1rem; }
+        .modal .actions { display: flex; justify-content: flex-end; gap: 1rem; }
+        .modal-result { margin-top: 1rem; display: none; }
+
+        /* Utilities */
+        .text-error { color: var(--error); }
+        .text-success { color: var(--success); }
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+        .empty-state i { margin-bottom: 1rem; color: var(--border); }
+    </style>
 </head>
 <body>
-<div class="shell">
 
-  <!-- Header -->
-  <header class="header">
-    <div class="header-left">
-      <div class="logo">M</div>
-      <div>
-        <h1>MATECOS</h1>
-        <div class="subtitle">Multi-Agent Tool Ecosystem · Control Plane</div>
-      </div>
-    </div>
-    <div class="header-right">
-      <span class="chip chip-green"><span class="dot dot-green"></span> System Online</span>
-      <span class="chip chip-blue">v0.1.0</span>
-      <span class="chip" style="background:var(--surface-2)">
-        <span style="color:var(--text-dim)">API</span>
-        <a href="/docs" target="_blank" style="color:var(--accent);text-decoration:none;font-weight:600">/docs</a>
-      </span>
-    </div>
-  </header>
-
-  <!-- Tabs -->
-  <nav class="tabs" role="tablist">
-    <button class="tab-btn active" onclick="switchTab('overview')" data-tab="overview">Overview</button>
-    <button class="tab-btn" onclick="switchTab('submit')" data-tab="submit">Submit Request</button>
-    <button class="tab-btn" onclick="switchTab('tools')" data-tab="tools">Tool Registry</button>
-    <button class="tab-btn" onclick="switchTab('agents')" data-tab="agents">Agent Roles</button>
-    <button class="tab-btn" onclick="switchTab('executions')" data-tab="executions">Executions</button>
-    <button class="tab-btn" onclick="switchTab('console')" data-tab="console">Live Console</button>
-  </nav>
-
-  <!-- TAB: Overview -->
-  <div id="tab-overview" class="tab-panel active">
-    <div class="metrics" id="overview-metrics">
-      <div class="metric-card">
-        <div class="metric-label">System Status</div>
-        <div class="metric-value" id="m-status" style="color:var(--green)">—</div>
-        <div class="metric-sub" id="m-version"></div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Registered Tools</div>
-        <div class="metric-value" id="m-tools">—</div>
-        <div class="metric-sub">Active in registry</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Total Requests</div>
-        <div class="metric-value" id="m-requests">—</div>
-        <div class="metric-sub">Since last restart</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Error Rate</div>
-        <div class="metric-value" id="m-errors">—</div>
-        <div class="metric-sub">Total errors</div>
-      </div>
-    </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-header"><span class="card-title">Infrastructure Health</span></div>
-        <div class="card-body">
-          <table>
-            <thead><tr><th>Component</th><th>Status</th><th>Latency</th></tr></thead>
-            <tbody id="health-table"><tr><td colspan="3" class="text-dim">Loading...</td></tr></tbody>
-          </table>
+    <header class="header">
+        <div class="logo-area">
+            <i data-lucide="hexagon" class="logo-icon"></i>
+            MATECOS
         </div>
-      </div>
-
-      <div class="card">
-        <div class="card-header"><span class="card-title">Architecture at a Glance</span></div>
-        <div class="card-body" style="font-size:13px; line-height:1.8">
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
-            <div><span class="text-dim">State Machines</span><br><strong>3 Nested FSMs</strong><br><span class="text-dim" style="font-size:11px">Execution · Agent · Tool</span></div>
-            <div><span class="text-dim">Agent Roles</span><br><strong>10 Specializations</strong><br><span class="text-dim" style="font-size:11px">Planner, Analyst, Coder, ...</span></div>
-            <div><span class="text-dim">Risk Classifiers</span><br><strong>6 Non-Bypassable</strong><br><span class="text-dim" style="font-size:11px">Prompt Injection, Exfil, ...</span></div>
-            <div><span class="text-dim">Memory Tiers</span><br><strong>3-Layer System</strong><br><span class="text-dim" style="font-size:11px">Working · Episodic · Event</span></div>
-            <div><span class="text-dim">Security</span><br><strong>Docker Sandbox</strong><br><span class="text-dim" style="font-size:11px">--network none, non-root</span></div>
-            <div><span class="text-dim">Test Coverage</span><br><strong>249 Tests</strong><br><span class="text-dim" style="font-size:11px">Unit, Security, E2E, Contract</span></div>
-          </div>
+        <div class="nav-pills">
+            <div class="nav-item active" onclick="switchTab('tools')">Tool Collection</div>
+            <div class="nav-item" onclick="switchTab('tasks')">Task Runner</div>
         </div>
-      </div>
-    </div>
+    </header>
 
-    <div class="card">
-      <div class="card-header"><span class="card-title">API Endpoints</span></div>
-      <div class="card-body">
-        <table>
-          <thead><tr><th>Method</th><th>Path</th><th>Description</th><th>Try</th></tr></thead>
-          <tbody>
-            <tr><td><span class="badge badge-green">GET</span></td><td class="mono">/health</td><td>Liveness probe</td><td><button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="tryEndpoint('GET','/health')">Test</button></td></tr>
-            <tr><td><span class="badge badge-green">GET</span></td><td class="mono">/readiness</td><td>Readiness with component checks</td><td><button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="tryEndpoint('GET','/readiness')">Test</button></td></tr>
-            <tr><td><span class="badge badge-green">GET</span></td><td class="mono">/metrics</td><td>Prometheus metrics</td><td><button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="tryEndpoint('GET','/metrics')">Test</button></td></tr>
-            <tr><td><span class="badge badge-blue">POST</span></td><td class="mono">/v1/requests</td><td>Submit an agent task request</td><td><button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="switchTab('submit')">Go →</button></td></tr>
-            <tr><td><span class="badge badge-green">GET</span></td><td class="mono">/v1/tools</td><td>List registered tools</td><td><button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="tryEndpoint('GET','/v1/tools')">Test</button></td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- TAB: Submit Request -->
-  <div id="tab-submit" class="tab-panel">
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-header"><span class="card-title">Submit New Request</span></div>
-        <div class="card-body">
-          <form id="submit-form" onsubmit="submitRequest(event)">
-            <div class="form-group">
-              <label class="form-label">Goal / Objective</label>
-              <textarea id="goal-input" rows="4" placeholder="e.g. Analyze quarterly revenue data and produce an executive briefing..."></textarea>
+    <div class="container">
+        
+        <!-- TOOL COLLECTION VIEW -->
+        <section id="view-tools" class="view-section active">
+            <div class="input-group">
+                <i data-lucide="github" style="color: var(--text-muted); margin-top: 10px;"></i>
+                <input type="text" id="import-url" class="input-lg" placeholder="https://github.com/user/repo" />
+                <input type="text" id="import-branch" class="input-sm" placeholder="main" value="main" />
+                <button onclick="importRepo()" id="btn-import">
+                    <i data-lucide="download"></i> Import Tools
+                </button>
             </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
-              <div class="form-group">
-                <label class="form-label">Max Cost (USD)</label>
-                <input type="number" id="max-cost" value="10" step="0.5" min="0.5">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Max Duration (seconds)</label>
-                <input type="number" id="max-duration" value="3600" step="60" min="60">
-              </div>
+
+            <div id="import-status-area" class="import-status">
+                <i data-lucide="loader-2" class="spinner" style="color: var(--primary)"></i>
+                <div id="import-msg">Cloning repository...</div>
             </div>
-            <button type="submit" class="btn btn-primary" id="submit-btn">
-              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-              Submit Request
-            </button>
-          </form>
+
+            <div class="tools-header">
+                <h2>Registered Tools</h2>
+                <span id="tool-count" class="text-muted">0 tools registered</span>
+            </div>
+
+            <div id="tools-grid" class="tool-grid">
+                <!-- Tools will be injected here -->
+            </div>
+        </section>
+
+        <!-- TASK RUNNER VIEW -->
+        <section id="view-tasks" class="view-section">
+            <div class="task-input-area">
+                <textarea id="task-input" placeholder="What would you like to do?"></textarea>
+                <div class="examples">
+                    <span class="text-muted" style="font-size: 0.85rem; align-self: center;">Examples:</span>
+                    <div class="example-pill" onclick="setTask('Calculate 45 * 67 + sin(30)')">Calculate 45 * 67 + sin(30)</div>
+                    <div class="example-pill" onclick="setTask('Fetch the content of https://example.com')">Fetch https://example.com</div>
+                    <div class="example-pill" onclick="setTask('Profile the CSV data at secure://uploads/sales.csv')">Profile sales.csv</div>
+                </div>
+                <div style="display: flex; justify-content: flex-end;">
+                    <button onclick="runTask()" id="btn-run">
+                        <i data-lucide="play"></i> Run Task
+                    </button>
+                </div>
+            </div>
+
+            <div id="task-result" class="result-area">
+                <div class="result-header">
+                    <div class="tool-used-badge">
+                        <i data-lucide="wrench" size="16"></i>
+                        <span id="res-tool">math.calculator</span>
+                    </div>
+                    <div class="result-meta">
+                        <span id="res-time"><i data-lucide="clock" size="14" style="display:inline; vertical-align:middle;"></i> 1.2s</span>
+                    </div>
+                </div>
+                <div id="res-reason" class="result-reasoning">
+                    Selected because it involves a mathematical expression.
+                </div>
+                <div id="res-content" class="result-content">
+                    <!-- Result content injected here -->
+                </div>
+            </div>
+
+            <div class="history-section">
+                <h3>Task History</h3>
+                <div id="history-list" class="history-list">
+                    <!-- History injected here -->
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Test Tool Modal -->
+    <div id="test-modal" class="modal-backdrop">
+        <div class="modal">
+            <h3>Test Tool: <span id="test-tool-id" style="color:var(--primary)"></span></h3>
+            <textarea id="test-payload" placeholder="{&#10;  &quot;arg1&quot;: &quot;value&quot;&#10;}"></textarea>
+            <div class="actions">
+                <button class="secondary" onclick="closeModal()">Cancel</button>
+                <button onclick="executeTestTool()" id="btn-test-exec">Execute</button>
+            </div>
+            <div id="test-result" class="modal-result result-format-json"></div>
         </div>
-      </div>
-
-      <div class="card">
-        <div class="card-header"><span class="card-title">Response</span></div>
-        <div class="card-body">
-          <div class="console" id="submit-response" style="min-height:200px"><span class="log-dim">Submit a request to see the response here...</span></div>
-        </div>
-      </div>
     </div>
-  </div>
 
-  <!-- TAB: Tool Registry -->
-  <div id="tab-tools" class="tab-panel">
-    <div class="card">
-      <div class="card-header flex-between">
-        <span class="card-title">Registered Tools</span>
-        <button class="btn btn-ghost" style="padding:6px 14px;font-size:12px" onclick="loadTools()">↻ Refresh</button>
-      </div>
-      <div class="card-body" style="padding:0">
-        <table>
-          <thead><tr><th>Tool ID</th><th>Name</th><th>Version</th><th>Risk</th><th>Runtime</th><th>Status</th></tr></thead>
-          <tbody id="tools-table"><tr><td colspan="6" class="text-dim" style="text-align:center;padding:32px">Click Refresh to load tools</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+    <script>
+        // API Config
+        const HEADERS = {
+            'Authorization': 'Bearer dev-test-token',
+            'Content-Type': 'application/json'
+        };
+        const API_BASE = '/v1';
 
-  <!-- TAB: Agent Roles -->
-  <div id="tab-agents" class="tab-panel">
-    <div class="card">
-      <div class="card-header"><span class="card-title">Agent Role Specifications (10 Roles)</span></div>
-      <div class="card-body" style="padding:0">
-        <table>
-          <thead><tr><th>Role</th><th>Display Name</th><th>Capabilities</th><th>Max Iters</th><th>Budget</th><th>Delegation</th></tr></thead>
-          <tbody>
-            <tr><td class="mono">planner</td><td>Planner</td><td><span class="badge badge-purple">planning</span> <span class="badge badge-purple">decomposition</span></td><td>5</td><td>$1.00</td><td><span class="badge badge-green">Yes</span></td></tr>
-            <tr><td class="mono">researcher</td><td>Researcher</td><td><span class="badge badge-blue">web_search</span> <span class="badge badge-blue">summarisation</span></td><td>40</td><td>$3.00</td><td>—</td></tr>
-            <tr><td class="mono">analyst</td><td>Data Analyst</td><td><span class="badge badge-blue">data_analysis</span> <span class="badge badge-blue">statistics</span></td><td>30</td><td>$5.00</td><td>—</td></tr>
-            <tr><td class="mono">coder</td><td>Code Engineer</td><td><span class="badge badge-blue">code_gen</span> <span class="badge badge-blue">debugging</span></td><td>50</td><td>$8.00</td><td>—</td></tr>
-            <tr><td class="mono">writer</td><td>Content Writer</td><td><span class="badge badge-blue">writing</span> <span class="badge badge-blue">reports</span></td><td>20</td><td>$2.00</td><td>—</td></tr>
-            <tr><td class="mono">verifier</td><td>Verifier</td><td><span class="badge badge-yellow">verification</span> <span class="badge badge-yellow">QA</span></td><td>5</td><td>$1.00</td><td>—</td></tr>
-            <tr><td class="mono">risk_assessor</td><td>Risk Assessor</td><td><span class="badge badge-red">risk</span> <span class="badge badge-red">security</span></td><td>3</td><td>$0.50</td><td>—</td></tr>
-            <tr><td class="mono">orchestrator</td><td>Orchestrator</td><td><span class="badge badge-purple">coordination</span> <span class="badge badge-purple">routing</span></td><td>10</td><td>$2.00</td><td><span class="badge badge-green">Yes</span></td></tr>
-            <tr><td class="mono">critic</td><td>Critic</td><td><span class="badge badge-yellow">review</span> <span class="badge badge-yellow">feedback</span></td><td>5</td><td>$1.00</td><td>—</td></tr>
-            <tr><td class="mono">executor</td><td>Executor</td><td><span class="badge badge-blue">execution</span> <span class="badge badge-blue">sandbox</span></td><td>30</td><td>$5.00</td><td>—</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+        // Initialize Icons
+        lucide.createIcons();
 
-  <!-- TAB: Executions -->
-  <div id="tab-executions" class="tab-panel">
-    <div class="card">
-      <div class="card-header flex-between">
-        <span class="card-title">Recent Executions</span>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="text" id="exec-lookup" placeholder="Execution ID..." style="width:260px;padding:6px 12px;font-size:12px">
-          <button class="btn btn-ghost" style="padding:6px 14px;font-size:12px" onclick="lookupExecution()">Lookup</button>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="console" id="exec-result" style="min-height:120px"><span class="log-dim">Enter an execution ID and click Lookup, or submit a new request first.</span></div>
-      </div>
-    </div>
-  </div>
+        // UI State
+        let currentToolIdForTest = '';
 
-  <!-- TAB: Live Console -->
-  <div id="tab-console" class="tab-panel">
-    <div class="card">
-      <div class="card-header flex-between">
-        <span class="card-title">Live API Console</span>
-        <button class="btn btn-ghost" style="padding:6px 14px;font-size:12px" onclick="clearConsole()">Clear</button>
-      </div>
-      <div class="card-body">
-        <div class="console" id="live-console" style="min-height:300px"><span class="log-dim">API responses will appear here as you interact with the system...</span></div>
-      </div>
-    </div>
-  </div>
-
-</div>
-
-<script>
-  const BASE = window.location.origin;
-  const AUTH = { 'Authorization': 'Bearer dev-test-token', 'Content-Type': 'application/json' };
-
-  // --- Tab Switching ---
-  function switchTab(name) {
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('tab-' + name).classList.add('active');
-    document.querySelector(`[data-tab="${name}"]`).classList.add('active');
-  }
-
-  // --- Console Logging ---
-  function logToConsole(text, cls = '') {
-    const el = document.getElementById('live-console');
-    const ts = new Date().toLocaleTimeString();
-    const line = document.createElement('div');
-    line.innerHTML = `<span class="log-dim">[${ts}]</span> <span class="${cls}">${escapeHtml(text)}</span>`;
-    el.appendChild(line);
-    el.scrollTop = el.scrollHeight;
-  }
-
-  function clearConsole() {
-    document.getElementById('live-console').innerHTML = '<span class="log-dim">Console cleared.</span>';
-  }
-
-  function escapeHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-
-  function prettyJson(obj) {
-    return JSON.stringify(obj, null, 2);
-  }
-
-  // --- Overview: Health & Metrics ---
-  async function loadOverview() {
-    try {
-      const h = await fetch(BASE + '/health').then(r => r.json());
-      document.getElementById('m-status').textContent = h.status === 'healthy' ? 'Healthy' : h.status;
-      document.getElementById('m-status').style.color = h.status === 'healthy' ? 'var(--green)' : 'var(--yellow)';
-      document.getElementById('m-version').textContent = 'Version ' + (h.version || '—');
-      logToConsole(`GET /health → ${h.status}`, 'log-ok');
-    } catch(e) {
-      document.getElementById('m-status').textContent = 'Offline';
-      document.getElementById('m-status').style.color = 'var(--red)';
-      logToConsole(`GET /health → FAILED: ${e.message}`, 'log-err');
-    }
-
-    try {
-      const r = await fetch(BASE + '/readiness').then(r => r.json());
-      const tbody = document.getElementById('health-table');
-      tbody.innerHTML = '';
-      const comps = r.components || {};
-      if (Object.keys(comps).length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" class="text-dim">No infrastructure components connected (standalone mode)</td></tr>';
-      } else {
-        for (const [name, info] of Object.entries(comps)) {
-          const st = info.status || 'unknown';
-          const cls = st === 'healthy' ? 'badge-green' : st === 'degraded' ? 'badge-yellow' : 'badge-red';
-          const lat = info.latency_ms != null ? info.latency_ms.toFixed(1) + ' ms' : '—';
-          tbody.innerHTML += `<tr><td style="font-weight:500">${name}</td><td><span class="badge ${cls}">${st}</span></td><td class="mono">${lat}</td></tr>`;
+        // --- Navigation ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            
+            if (tabId === 'tools') {
+                document.querySelector('.nav-item:nth-child(1)').classList.add('active');
+                document.getElementById('view-tools').classList.add('active');
+                loadTools();
+            } else {
+                document.querySelector('.nav-item:nth-child(2)').classList.add('active');
+                document.getElementById('view-tasks').classList.add('active');
+                loadHistory();
+            }
         }
-      }
-      logToConsole(`GET /readiness → ${r.status}, components: ${Object.keys(comps).join(', ') || 'none'}`, 'log-info');
-    } catch(e) { logToConsole(`GET /readiness → FAILED: ${e.message}`, 'log-err'); }
 
-    try {
-      const m = await fetch(BASE + '/metrics').then(r => r.text());
-      const lines = m.split('\n').filter(l => l && !l.startsWith('#'));
-      for (const line of lines) {
-        if (line.startsWith('matecos_requests_total')) document.getElementById('m-requests').textContent = line.split(' ')[1] || '0';
-        if (line.startsWith('matecos_errors_total')) document.getElementById('m-errors').textContent = line.split(' ')[1] || '0';
-      }
-      logToConsole(`GET /metrics → ${lines.length} metric lines`, 'log-info');
-    } catch(e) { logToConsole(`GET /metrics → FAILED: ${e.message}`, 'log-err'); }
-  }
+        // --- View 1: Tool Collection ---
 
-  // --- Tools ---
-  async function loadTools() {
-    const tbody = document.getElementById('tools-table');
-    tbody.innerHTML = '<tr><td colspan="6" class="text-dim" style="text-align:center;padding:20px">Loading...</td></tr>';
-    try {
-      const r = await fetch(BASE + '/v1/tools', { headers: AUTH });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const data = await r.json();
-      const tools = data.items || data.tools || data || [];
-      tbody.innerHTML = '';
-      if (tools.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-dim" style="text-align:center;padding:32px">No tools registered yet</td></tr>';
-      } else {
-        for (const t of tools) {
-          const riskCls = t.risk_level === 'low' ? 'badge-green' : t.risk_level === 'medium' ? 'badge-yellow' : 'badge-red';
-          tbody.innerHTML += `<tr>
-            <td class="mono">${t.tool_id || t.id || '—'}</td>
-            <td>${t.name || '—'}</td>
-            <td>${t.version || '—'}</td>
-            <td><span class="badge ${riskCls}">${(t.risk_level||'—').toUpperCase()}</span></td>
-            <td class="mono">${t.runtime_type || t.runtime || '—'}</td>
-            <td><span class="badge ${t.is_available !== false ? 'badge-green' : 'badge-red'}">${t.is_available !== false ? 'ACTIVE' : 'INACTIVE'}</span></td>
-          </tr>`;
+        async function loadTools() {
+            const grid = document.getElementById('tools-grid');
+            grid.innerHTML = '<div class="empty-state"><i data-lucide="loader-2" class="spinner" size="32"></i><p>Loading tools...</p></div>';
+            lucide.createIcons();
+
+            try {
+                // We add some builtins virtually if API doesn't return them, but API should return registered tools.
+                const res = await fetch(`${API_BASE}/github/tools`, { headers: HEADERS });
+                
+                // Mock response fallback if API fails
+                let tools = [];
+                if (res.ok) {
+                    const data = await res.json();
+                    tools = data.tools || data || [];
+                } else {
+                    // Fallback to builtin list for display purposes if backend endpoint is unavailable during UI dev
+                    tools = [
+                        { id: 'math.calculator', name: 'Calculator', description: 'Evaluates mathematical expressions.', capabilities: ['math'], risk_level: 'low', source: 'builtin' },
+                        { id: 'web.http_fetch', name: 'HTTP Fetcher', description: 'Fetches content from URLs.', capabilities: ['network'], risk_level: 'medium', source: 'builtin' },
+                        { id: 'data.csv.profile', name: 'CSV Profiler', description: 'Profiles CSV datasets.', capabilities: ['data', 'read'], risk_level: 'low', source: 'builtin' }
+                    ];
+                }
+                
+                document.getElementById('tool-count').innerText = `${tools.length} tools registered`;
+
+                if (tools.length === 0) {
+                    grid.innerHTML = '<div class="empty-state"><i data-lucide="inbox" size="32"></i><p>No tools registered yet.</p></div>';
+                    lucide.createIcons();
+                    return;
+                }
+
+                grid.innerHTML = '';
+                tools.forEach((tool, i) => {
+                    const el = document.createElement('div');
+                    const riskClass = tool.risk_level === 'high' ? 'risk-high' : (tool.risk_level === 'medium' ? 'risk-medium' : 'risk-low');
+                    const badgeClass = tool.risk_level === 'high' ? 'badge-high' : (tool.risk_level === 'medium' ? 'badge-medium' : 'badge-low');
+                    const sourceIcon = tool.source === 'builtin' ? 'cpu' : 'github';
+                    const sourceText = tool.source === 'builtin' ? 'Built-in' : (tool.repo || 'GitHub');
+
+                    el.className = `tool-card ${riskClass}`;
+                    el.style.animationDelay = `${i * 0.05}s`;
+                    
+                    const caps = (tool.capabilities || []).map(c => `<span class="tag">${c}</span>`).join('');
+
+                    el.innerHTML = `
+                        <div class="tool-header">
+                            <div>
+                                <div class="tool-title">${tool.name || tool.id}</div>
+                                <div class="tool-source"><i data-lucide="${sourceIcon}" size="12"></i> ${sourceText} • ${tool.id}</div>
+                            </div>
+                            <span class="badge ${badgeClass}">${tool.risk_level || 'low'} risk</span>
+                        </div>
+                        <div class="tool-desc">${tool.description || 'No description provided.'}</div>
+                        <div class="tag-list">${caps}</div>
+                        <div class="tool-actions">
+                            <button class="secondary sm" onclick="openTestModal('${tool.id}')">Test</button>
+                            ${tool.source !== 'builtin' ? `<button class="secondary sm" style="margin-left:8px; color:var(--error)" onclick="removeRepo('${tool.repo}')"><i data-lucide="trash-2" size="14"></i></button>` : ''}
+                        </div>
+                    `;
+                    grid.appendChild(el);
+                });
+                lucide.createIcons();
+
+            } catch (err) {
+                console.error(err);
+                grid.innerHTML = `<div class="empty-state text-error"><i data-lucide="alert-triangle" size="32"></i><p>Failed to load tools.</p></div>`;
+                lucide.createIcons();
+            }
         }
-        document.getElementById('m-tools').textContent = tools.length;
-      }
-      logToConsole(`GET /v1/tools → ${tools.length} tools loaded`, 'log-ok');
-    } catch(e) {
-      tbody.innerHTML = `<tr><td colspan="6" class="text-dim" style="text-align:center;padding:32px">Failed to load: ${escapeHtml(e.message)}</td></tr>`;
-      logToConsole(`GET /v1/tools → FAILED: ${e.message}`, 'log-err');
-    }
-  }
 
-  // --- Submit Request ---
-  async function submitRequest(e) {
-    e.preventDefault();
-    const goal = document.getElementById('goal-input').value.trim();
-    if (!goal) { alert('Please enter a goal.'); return; }
-    const btn = document.getElementById('submit-btn');
-    btn.disabled = true; btn.textContent = 'Submitting...';
-    const out = document.getElementById('submit-response');
-    out.innerHTML = '<span class="log-info">Sending request...</span>';
+        async function importRepo() {
+            const url = document.getElementById('import-url').value;
+            const branch = document.getElementById('import-branch').value || 'main';
+            if (!url) return;
 
-    const body = {
-      text: goal,
-      constraints: {
-        max_cost: parseFloat(document.getElementById('max-cost').value),
-        max_duration_seconds: parseInt(document.getElementById('max-duration').value),
-      }
-    };
+            const statusArea = document.getElementById('import-status-area');
+            const statusMsg = document.getElementById('import-msg');
+            const btn = document.getElementById('btn-import');
 
-    try {
-      const r = await fetch(BASE + '/v1/requests', { method: 'POST', headers: AUTH, body: JSON.stringify(body) });
-      const data = await r.json();
-      out.innerHTML = `<span class="log-ok">HTTP ${r.status} — Success</span>\n\n` + escapeHtml(prettyJson(data));
-      logToConsole(`POST /v1/requests → ${r.status} | exec_id: ${data.execution_id || '—'}`, 'log-ok');
-      if (data.execution_id) {
-        document.getElementById('exec-lookup').value = data.execution_id;
-      }
-    } catch(e) {
-      out.innerHTML = `<span class="log-err">Request failed: ${escapeHtml(e.message)}</span>`;
-      logToConsole(`POST /v1/requests → FAILED: ${e.message}`, 'log-err');
-    }
-    btn.disabled = false; btn.innerHTML = `<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Submit Request`;
-  }
+            btn.disabled = true;
+            statusArea.classList.add('active');
+            
+            // Simulate progression steps
+            let step = 0;
+            const msgs = ['Cloning repository...', 'Indexing files...', 'Extracting tools...'];
+            const interval = setInterval(() => {
+                step++;
+                if(step < msgs.length) statusMsg.innerText = msgs[step];
+            }, 800);
 
-  // --- Execution Lookup ---
-  async function lookupExecution() {
-    const id = document.getElementById('exec-lookup').value.trim();
-    if (!id) { alert('Enter an execution ID'); return; }
-    const out = document.getElementById('exec-result');
-    out.innerHTML = '<span class="log-info">Looking up...</span>';
-    try {
-      const r = await fetch(BASE + '/v1/requests/' + id, { headers: AUTH });
-      const data = await r.json();
-      out.innerHTML = `<span class="${r.ok ? 'log-ok' : 'log-warn'}">HTTP ${r.status}</span>\n\n` + escapeHtml(prettyJson(data));
-      logToConsole(`GET /v1/requests/${id} → ${r.status}`, r.ok ? 'log-ok' : 'log-warn');
-    } catch(e) {
-      out.innerHTML = `<span class="log-err">Lookup failed: ${escapeHtml(e.message)}</span>`;
-      logToConsole(`GET /v1/requests/${id} → FAILED`, 'log-err');
-    }
-  }
+            try {
+                const res = await fetch(`${API_BASE}/github/import`, {
+                    method: 'POST',
+                    headers: HEADERS,
+                    body: JSON.stringify({ url, branch })
+                });
 
-  // --- Try Endpoint ---
-  async function tryEndpoint(method, path) {
-    switchTab('console');
-    logToConsole(`${method} ${path} ...`, 'log-info');
-    try {
-      const r = await fetch(BASE + path, { headers: AUTH });
-      const ct = r.headers.get('content-type') || '';
-      let body;
-      if (ct.includes('json')) {
-        body = prettyJson(await r.json());
-      } else {
-        body = await r.text();
-      }
-      logToConsole(`→ HTTP ${r.status}`, r.ok ? 'log-ok' : 'log-warn');
-      const el = document.getElementById('live-console');
-      const pre = document.createElement('div');
-      pre.style.cssText = 'margin:4px 0 12px;padding:10px;background:var(--surface-2);border-radius:6px;font-size:12px;white-space:pre-wrap;overflow-x:auto';
-      pre.textContent = body;
-      el.appendChild(pre);
-      el.scrollTop = el.scrollHeight;
-    } catch(e) {
-      logToConsole(`→ FAILED: ${e.message}`, 'log-err');
-    }
-  }
+                clearInterval(interval);
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    statusMsg.innerHTML = `<span class="text-success">Done! Imported tools from ${url}.</span>`;
+                    document.getElementById('import-url').value = '';
+                    loadTools();
+                } else {
+                    const err = await res.json();
+                    statusMsg.innerHTML = `<span class="text-error">Failed: ${err.detail || err.error || 'Unknown error'}</span>`;
+                }
+            } catch (err) {
+                clearInterval(interval);
+                statusMsg.innerHTML = `<span class="text-error">Network error during import.</span>`;
+            }
 
-  // --- Init ---
-  loadOverview();
-</script>
+            setTimeout(() => {
+                statusArea.classList.remove('active');
+                btn.disabled = false;
+            }, 3000);
+        }
+
+        async function removeRepo(repoName) {
+            if(!confirm(`Remove imported repo ${repoName}?`)) return;
+            try {
+                await fetch(`${API_BASE}/github/repos/${encodeURIComponent(repoName)}`, {
+                    method: 'DELETE',
+                    headers: HEADERS
+                });
+                loadTools();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function openTestModal(toolId) {
+            currentToolIdForTest = toolId;
+            document.getElementById('test-tool-id').innerText = toolId;
+            document.getElementById('test-payload').value = '{\n  \n}';
+            document.getElementById('test-result').style.display = 'none';
+            document.getElementById('test-modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('test-modal').classList.remove('active');
+        }
+
+        async function executeTestTool() {
+            const btn = document.getElementById('btn-test-exec');
+            const resDiv = document.getElementById('test-result');
+            let payload = {};
+            
+            try {
+                const txt = document.getElementById('test-payload').value;
+                if (txt.trim()) payload = JSON.parse(txt);
+            } catch (e) {
+                resDiv.style.display = 'block';
+                resDiv.className = 'modal-result result-format-json text-error';
+                resDiv.innerText = 'Invalid JSON payload';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = 'Running...';
+            resDiv.style.display = 'none';
+
+            try {
+                const res = await fetch(`${API_BASE}/github/tools/${currentToolIdForTest}/execute`, {
+                    method: 'POST',
+                    headers: HEADERS,
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await res.json();
+                resDiv.style.display = 'block';
+                resDiv.className = 'modal-result result-format-json';
+                resDiv.innerText = JSON.stringify(data, null, 2);
+            } catch (err) {
+                resDiv.style.display = 'block';
+                resDiv.className = 'modal-result result-format-json text-error';
+                resDiv.innerText = 'Execution failed: ' + err.message;
+            }
+
+            btn.disabled = false;
+            btn.innerText = 'Execute';
+        }
+
+        // --- View 2: Task Runner ---
+
+        function setTask(text) {
+            document.getElementById('task-input').value = text;
+        }
+
+        async function runTask() {
+            const taskText = document.getElementById('task-input').value.trim();
+            if (!taskText) return;
+
+            const btn = document.getElementById('btn-run');
+            const resArea = document.getElementById('task-result');
+            const resContent = document.getElementById('res-content');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader-2" class="spinner"></i> Running...';
+            lucide.createIcons();
+            resArea.classList.remove('active');
+
+            const startTime = Date.now();
+
+            try {
+                const res = await fetch(`${API_BASE}/tasks/run`, {
+                    method: 'POST',
+                    headers: HEADERS,
+                    body: JSON.stringify({ task: taskText, max_cost: 1.0 })
+                });
+
+                const endTime = Date.now();
+                const duration = ((endTime - startTime) / 1000).toFixed(2);
+
+                const data = await res.json();
+                
+                // Show result area
+                resArea.classList.add('active');
+                document.getElementById('res-tool').innerText = data.tool_used || 'unknown.tool';
+                document.getElementById('res-time').innerHTML = `<i data-lucide="clock" size="14" style="display:inline; vertical-align:middle;"></i> ${duration}s`;
+                document.getElementById('res-reason').innerText = data.reasoning || 'Executed based on semantic match.';
+                
+                // Format output
+                renderResult(data.tool_used, data.result, resContent);
+                lucide.createIcons();
+                loadHistory();
+
+            } catch (err) {
+                resArea.classList.add('active');
+                document.getElementById('res-tool').innerText = 'error';
+                document.getElementById('res-reason').innerText = 'Task execution failed.';
+                resContent.innerHTML = `<div class="text-error">Error: ${err.message}</div>`;
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="play"></i> Run Task';
+            lucide.createIcons();
+        }
+
+        function renderResult(tool, resultData, container) {
+            if (!resultData) {
+                container.innerHTML = `<div class="result-format-json">null</div>`;
+                return;
+            }
+
+            // Simple heuristic formatting based on tool name or data shape
+            const toolStr = String(tool).toLowerCase();
+
+            if (toolStr.includes('math') || toolStr.includes('calc')) {
+                const val = typeof resultData === 'object' ? (resultData.result || resultData.value || JSON.stringify(resultData)) : resultData;
+                container.innerHTML = `<div class="result-format-calc">${val}</div>`;
+            } 
+            else if (toolStr.includes('http') || toolStr.includes('fetch')) {
+                container.innerHTML = `
+                    <div style="display:flex; gap: 1rem; margin-bottom: 1rem;">
+                        <span class="badge badge-low">Status: ${resultData.status_code || 200}</span>
+                    </div>
+                    <div class="result-format-json">${typeof resultData.body === 'string' ? resultData.body.substring(0, 1000) + (resultData.body.length>1000?'...':'') : JSON.stringify(resultData.body || resultData, null, 2)}</div>
+                `;
+            }
+            else if (toolStr.includes('csv') || toolStr.includes('profile')) {
+                // Assuming resultData has column profiles
+                const cols = resultData.columns || resultData.profiles || {};
+                if (Object.keys(cols).length > 0 && typeof Object.values(cols)[0] === 'object') {
+                    let rows = '';
+                    for (const [colName, stats] of Object.entries(cols)) {
+                        rows += `<tr>
+                            <td><strong>${colName}</strong></td>
+                            <td>${stats.type || '-'}</td>
+                            <td>${stats.null_count !== undefined ? stats.null_count : '-'}</td>
+                            <td>${stats.min !== undefined ? stats.min : '-'}</td>
+                            <td>${stats.max !== undefined ? stats.max : '-'}</td>
+                        </tr>`;
+                    }
+                    container.innerHTML = `
+                        <table class="result-format-table">
+                            <thead><tr><th>Column</th><th>Type</th><th>Nulls</th><th>Min</th><th>Max</th></tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    `;
+                } else {
+                    container.innerHTML = `<div class="result-format-json">${JSON.stringify(resultData, null, 2)}</div>`;
+                }
+            }
+            else {
+                // Default JSON
+                container.innerHTML = `<div class="result-format-json">${JSON.stringify(resultData, null, 2)}</div>`;
+            }
+        }
+
+        async function loadHistory() {
+            const list = document.getElementById('history-list');
+            try {
+                const res = await fetch(`${API_BASE}/tasks/history`, { headers: HEADERS });
+                if(!res.ok) return;
+                const data = await res.json();
+                const history = data.history || data || [];
+                
+                list.innerHTML = '';
+                if(history.length === 0) {
+                    list.innerHTML = '<div class="text-muted" style="text-align:center; padding: 2rem 0;">No tasks run yet.</div>';
+                    return;
+                }
+
+                history.slice(0, 10).forEach(item => {
+                    const el = document.createElement('div');
+                    el.className = 'history-item';
+                    const statusColor = item.status === 'success' ? 'var(--success)' : (item.status === 'error' ? 'var(--error)' : 'var(--text-muted)');
+                    const dateStr = item.timestamp ? new Date(item.timestamp).toLocaleString() : 'Just now';
+                    
+                    el.innerHTML = `
+                        <div class="history-main">
+                            <div class="history-task">${item.task || 'Unknown task'}</div>
+                            <div class="history-sub">
+                                <span style="color: ${statusColor}">● ${item.status || 'completed'}</span>
+                                <span><i data-lucide="wrench" size="12"></i> ${item.tool_used || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="text-muted" style="font-size: 0.8rem;">${dateStr}</div>
+                    `;
+                    list.appendChild(el);
+                });
+                lucide.createIcons();
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        // Init
+        window.addEventListener('DOMContentLoaded', () => {
+            loadTools(); // default view
+        });
+
+    </script>
 </body>
 </html>
