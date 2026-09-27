@@ -37,6 +37,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     settings = get_settings()
 
+    import time
+    app.state.startup_time = time.time()
+
     # --- Startup ---
     logger.info("app.startup", env=settings.app_env)
 
@@ -122,7 +125,7 @@ def create_app() -> FastAPI:
     )
 
     # --- CORS ---
-    cors_origins = settings.api_cors_origins + ["http://localhost:8000"]
+    cors_origins = ["*"]
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins,
@@ -207,6 +210,13 @@ def create_app() -> FastAPI:
         app.include_router(tasks_router)
     except (ImportError, Exception) as e:
         logger.error(f"Failed to load tasks_router: {e}")
+
+    try:
+        from src.api.routes.platform import router as platform_router
+        
+        app.include_router(platform_router)
+    except (ImportError, Exception) as e:
+        logger.error(f"Failed to load platform_router: {e}")
 
     # Dashboard UI — serves the web interface at / and /dashboard
     try:

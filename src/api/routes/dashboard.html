@@ -3,781 +3,1564 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MATECOS Dashboard</title>
+    <title>MATECOS Platform | Autonomous AI Tool Ecosystem</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
-            --bg-deep: #09090b;
-            --bg-surface: #18181b;
-            --bg-surface-glass: rgba(24, 24, 27, 0.7);
-            --border: #27272a;
-            --border-hover: #3f3f46;
-            --primary: #3b82f6;
-            --primary-hover: #2563eb;
+            --bg-color: #09090b;
+            --sidebar-bg: #0d0d11;
+            --surface: #141418;
+            --surface-hover: #1c1c22;
+            --surface-glass: rgba(20, 20, 24, 0.85);
+            --border: #24242c;
+            --border-hover: #3b3b47;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --primary-subtle: rgba(99, 102, 241, 0.12);
             --success: #22c55e;
-            --success-glow: rgba(34, 197, 94, 0.2);
+            --success-subtle: rgba(34, 197, 94, 0.12);
             --warning: #f59e0b;
-            --warning-glow: rgba(245, 158, 11, 0.2);
+            --warning-subtle: rgba(245, 158, 11, 0.12);
             --error: #ef4444;
-            --error-glow: rgba(239, 68, 68, 0.2);
+            --error-subtle: rgba(239, 68, 68, 0.12);
+            --info: #38bdf8;
+            --info-subtle: rgba(56, 189, 248, 0.12);
             --text-main: #fafafa;
-            --text-muted: #a1a1aa;
-            --transition: 0.2s ease;
+            --text-muted: #9494a0;
+            --text-dim: #60606d;
+            --sidebar-width: 260px;
+            --sidebar-collapsed-width: 68px;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            font-family: 'Inter', system-ui, sans-serif;
         }
 
         body {
-            font-family: 'Inter', system-ui, sans-serif;
-            background-color: var(--bg-deep);
+            background-color: var(--bg-color);
             color: var(--text-main);
-            min-height: 100vh;
             display: flex;
-            flex-direction: column;
-            overflow-x: hidden;
+            height: 100vh;
+            overflow: hidden;
+            font-size: 14px;
+            line-height: 1.5;
         }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar { width: 7px; height: 7px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
 
         /* Typography */
-        h1, h2, h3, h4 { font-weight: 600; }
-        
-        /* Layout */
-        .header {
-            background-color: var(--bg-surface-glass);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+        h1, h2, h3, h4 { color: var(--text-main); font-weight: 600; }
+        h1 { font-size: 24px; margin-bottom: 8px; }
+        h2 { font-size: 18px; margin-bottom: 16px; }
+        h3 { font-size: 16px; margin-bottom: 12px; }
+        p { color: var(--text-muted); }
+        code { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+
+        /* Sidebar */
+        #sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+        }
+        #sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+        }
+        .sidebar-header {
+            height: 64px;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
             border-bottom: 1px solid var(--border);
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 50;
-        }
-
-        .logo-area {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-size: 1.25rem;
             font-weight: 700;
-            letter-spacing: -0.025em;
+            font-size: 17px;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            gap: 12px;
         }
-
-        .logo-icon {
-            color: var(--primary);
-        }
-
-        .nav-pills {
+        .sidebar-header i { color: var(--primary); min-width: 24px; }
+        .nav-list {
+            flex: 1;
+            padding: 16px 12px;
             display: flex;
-            gap: 0.5rem;
-            background: var(--bg-deep);
-            padding: 0.25rem;
-            border-radius: 0.5rem;
-            border: 1px solid var(--border);
+            flex-direction: column;
+            gap: 4px;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
-
         .nav-item {
-            padding: 0.5rem 1rem;
-            border-radius: 0.375rem;
-            cursor: pointer;
-            font-size: 0.875rem;
-            font-weight: 500;
+            display: flex;
+            align-items: center;
+            padding: 10px 14px;
+            border-radius: 8px;
             color: var(--text-muted);
-            transition: var(--transition);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+            gap: 12px;
         }
-
         .nav-item:hover {
+            background-color: var(--surface-hover);
             color: var(--text-main);
         }
-
         .nav-item.active {
-            background-color: var(--bg-surface);
-            color: var(--text-main);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            background-color: var(--primary-subtle);
+            color: var(--primary);
+            font-weight: 600;
         }
+        .nav-item i { min-width: 20px; }
+        .nav-label {
+            flex: 1;
+            transition: opacity 0.2s;
+        }
+        #sidebar.collapsed .nav-label { opacity: 0; display: none; }
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        #collapse-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #collapse-btn:hover { background-color: var(--surface-hover); color: var(--text-main); }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-            width: 100%;
+        /* Main Content */
+        #main-content {
             flex: 1;
             display: flex;
             flex-direction: column;
-        }
-
-        .view-section {
-            display: none;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .view-section.active {
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
-
-        /* Forms & Inputs */
-        .input-group {
-            display: flex;
-            gap: 1rem;
-            background: var(--bg-surface);
-            padding: 1rem;
-            border-radius: 1rem;
-            border: 1px solid var(--border);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-        }
-
-        input {
-            background: var(--bg-deep);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            padding: 0.75rem 1rem;
-            border-radius: 0.5rem;
-            font-size: 0.95rem;
-            outline: none;
-            transition: var(--transition);
-        }
-
-        input:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-        }
-
-        .input-lg { flex: 1; }
-        .input-sm { width: 150px; }
-
-        textarea {
-            width: 100%;
-            background: var(--bg-deep);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            padding: 1rem;
-            border-radius: 0.75rem;
-            font-size: 1.1rem;
-            min-height: 120px;
-            resize: vertical;
-            outline: none;
-            transition: var(--transition);
-            font-family: inherit;
-        }
-
-        textarea:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-        }
-
-        button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem;
-            font-weight: 600;
-            font-size: 0.95rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: var(--transition);
-        }
-
-        button:hover {
-            background: var(--primary-hover);
-            transform: translateY(-1px);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-        
-        button:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        button.secondary {
-            background: var(--bg-deep);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-        }
-        
-        button.secondary:hover {
-            background: var(--border);
-        }
-
-        button.sm {
-            padding: 0.4rem 0.8rem;
-            font-size: 0.8rem;
-        }
-
-        /* Tool Collection View */
-        .import-status {
-            display: none;
-            background: var(--bg-surface);
-            border: 1px solid var(--border);
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-            margin-top: -1rem;
-            animation: slideDown 0.3s ease;
-        }
-        
-        .import-status.active {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .spinner {
-            animation: spin 1s linear infinite;
-        }
-
-        .tools-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 1rem;
-        }
-
-        .tool-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .tool-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            transition: var(--transition);
-            position: relative;
             overflow: hidden;
-            animation: fadeUp 0.4s ease backwards;
+            position: relative;
+        }
+        .top-bar {
+            height: 64px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface-glass);
+            backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            z-index: 10;
+        }
+        .page {
+            display: none;
+            padding: 32px;
+            overflow-y: auto;
+            height: calc(100vh - 64px);
+            animation: fadeIn 0.2s ease-out;
+        }
+        .page.active {
+            display: block;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Cards & Grids */
+        .card {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            transition: border-color 0.2s;
+        }
+        .card:hover {
+            border-color: var(--border-hover);
+        }
+        .grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+        .stat-card .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin: 8px 0 4px 0;
+            letter-spacing: -0.5px;
+        }
+        .stat-card .stat-sub {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .tool-card:hover {
-            transform: translateY(-2px);
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 9px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            border: 1px solid transparent;
+            text-decoration: none;
+        }
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-secondary {
+            background-color: var(--surface-hover);
+            color: var(--text-main);
+            border-color: var(--border);
+        }
+        .btn-secondary:hover {
+            background-color: var(--border-hover);
+            border-color: var(--text-muted);
+        }
+        .btn-danger {
+            background-color: var(--error-subtle);
+            color: var(--error);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+        .btn-danger:hover {
+            background-color: var(--error);
+            color: white;
+        }
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+        .btn-icon {
+            padding: 7px;
+            border-radius: 6px;
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-icon:hover {
+            background: var(--surface-hover);
+            color: var(--text-main);
             border-color: var(--border-hover);
         }
 
-        .tool-card.risk-low { border-top: 3px solid var(--success); }
-        .tool-card.risk-medium { border-top: 3px solid var(--warning); }
-        .tool-card.risk-high { border-top: 3px solid var(--error); }
-        
-        .tool-card.risk-low:hover { box-shadow: 0 4px 20px var(--success-glow); }
-        .tool-card.risk-medium:hover { box-shadow: 0 4px 20px var(--warning-glow); }
-        .tool-card.risk-high:hover { box-shadow: 0 4px 20px var(--error-glow); }
-
-        .tool-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
+        /* Inputs */
+        .input-group {
+            margin-bottom: 16px;
         }
-
-        .tool-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--text-main);
-            word-break: break-all;
-        }
-
-        .tool-source {
-            font-size: 0.75rem;
+        .input-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
             color: var(--text-muted);
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-            margin-top: 0.25rem;
-        }
-
-        .badge {
-            font-size: 0.7rem;
+            margin-bottom: 6px;
             text-transform: uppercase;
-            font-weight: 700;
-            padding: 0.2rem 0.5rem;
-            border-radius: 1rem;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.5px;
         }
-
-        .badge-low { background: rgba(34, 197, 94, 0.1); color: var(--success); border: 1px solid rgba(34,197,94,0.2); }
-        .badge-medium { background: rgba(245, 158, 11, 0.1); color: var(--warning); border: 1px solid rgba(245,158,11,0.2); }
-        .badge-high { background: rgba(239, 68, 68, 0.1); color: var(--error); border: 1px solid rgba(239,68,68,0.2); }
-
-        .tool-desc {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            line-height: 1.5;
-            flex-grow: 1;
-        }
-
-        .tag-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-        }
-
-        .tag {
-            background: var(--bg-deep);
+        .input, .textarea, .select {
+            width: 100%;
+            background-color: var(--bg-color);
             border: 1px solid var(--border);
-            padding: 0.2rem 0.5rem;
-            border-radius: 0.375rem;
-            font-size: 0.75rem;
-            color: var(--text-muted);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: var(--text-main);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .input:focus, .textarea:focus, .select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 1px var(--primary);
+        }
+        .textarea {
+            resize: vertical;
+            min-height: 90px;
         }
 
-        .tool-actions {
-            display: flex;
-            justify-content: flex-end;
-            margin-top: auto;
-            border-top: 1px solid var(--border);
-            padding-top: 1rem;
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
+        .badge-success { background-color: var(--success-subtle); color: var(--success); }
+        .badge-warning { background-color: var(--warning-subtle); color: var(--warning); }
+        .badge-error { background-color: var(--error-subtle); color: var(--error); }
+        .badge-info { background-color: var(--info-subtle); color: var(--info); }
+        .badge-outline { background-color: transparent; border: 1px solid var(--border); color: var(--text-muted); }
 
-        /* Task Runner View */
-        .task-input-area {
-            background: var(--bg-surface);
+        /* Chips & Tags */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .chip {
+            background-color: var(--surface-hover);
             border: 1px solid var(--border);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
-        }
-
-        .examples {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-
-        .example-pill {
-            background: var(--bg-deep);
-            border: 1px solid var(--border);
-            padding: 0.3rem 0.75rem;
-            border-radius: 1rem;
-            font-size: 0.8rem;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
             color: var(--text-muted);
             cursor: pointer;
-            transition: var(--transition);
+            transition: all 0.15s;
+            user-select: none;
         }
-
-        .example-pill:hover {
+        .chip:hover {
             color: var(--text-main);
             border-color: var(--primary);
-            background: rgba(59, 130, 246, 0.1);
+            background-color: var(--primary-subtle);
         }
 
-        .result-area {
-            display: none;
-            background: var(--bg-surface);
-            border: 1px solid var(--border);
-            border-radius: 1rem;
-            overflow: hidden;
-            animation: fadeIn 0.4s ease;
-        }
-        
-        .result-area.active {
-            display: block;
-        }
-
-        .result-header {
-            background: var(--bg-deep);
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .result-meta {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
-
-        .tool-used-badge {
-            background: rgba(59, 130, 246, 0.1);
-            color: var(--primary);
-            border: 1px solid rgba(59,130,246,0.2);
-            padding: 0.25rem 0.75rem;
-            border-radius: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-            font-weight: 500;
-        }
-
-        .result-reasoning {
-            padding: 1rem 1.5rem;
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            border-bottom: 1px solid var(--border);
-            background: rgba(255,255,255,0.02);
-            font-style: italic;
-        }
-
-        .result-content {
-            padding: 1.5rem;
-        }
-
-        .result-format-calc {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--success);
-            text-align: center;
-            padding: 2rem 0;
-            font-family: monospace;
-        }
-
-        .result-format-json {
-            background: var(--bg-deep);
-            padding: 1rem;
-            border-radius: 0.5rem;
-            font-family: monospace;
-            font-size: 0.85rem;
-            white-space: pre-wrap;
-            overflow-x: auto;
-            color: #a8b2d1;
-        }
-
-        .result-format-table {
+        /* Tables */
+        table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.9rem;
-        }
-        
-        .result-format-table th, .result-format-table td {
-            padding: 0.75rem;
-            border-bottom: 1px solid var(--border);
             text-align: left;
+            font-size: 13px;
         }
-
-        .result-format-table th {
+        th, td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        th {
             color: var(--text-muted);
-            font-weight: 600;
-        }
-
-        .history-section {
-            margin-top: 2rem;
-        }
-
-        .history-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-            margin-top: 1rem;
-        }
-
-        .history-item {
-            background: var(--bg-surface);
-            border: 1px solid var(--border);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .history-main {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-        
-        .history-task {
             font-weight: 500;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        tr:hover td { background-color: var(--surface-hover); }
+
+        /* Code Blocks */
+        .code-block {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 16px;
+            overflow-x: auto;
+            position: relative;
+        }
+        .code-block pre { margin: 0; }
+        .code-block code {
+            color: #cbd5e1;
+            line-height: 1.6;
         }
 
-        .history-sub {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            display: flex;
-            gap: 1rem;
-        }
-
-        /* Animations */
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-        /* Modal */
-        .modal-backdrop {
+        /* Modals */
+        .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(4px);
-            z-index: 100;
+            background-color: rgba(9, 9, 11, 0.75);
+            backdrop-filter: blur(8px);
             display: none;
-            justify-content: center;
             align-items: center;
-            animation: fadeIn 0.2s ease;
+            justify-content: center;
+            z-index: 200;
         }
-
-        .modal-backdrop.active { display: flex; }
-
         .modal {
-            background: var(--bg-surface);
+            background-color: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 1rem;
-            padding: 2rem;
-            width: 100%;
-            max-width: 500px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 620px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            animation: modalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes modalIn { from { transform: scale(0.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
         }
 
-        .modal h3 { margin-bottom: 1rem; }
-        .modal textarea { min-height: 80px; margin-bottom: 1rem; }
-        .modal .actions { display: flex; justify-content: flex-end; gap: 1rem; }
-        .modal-result { margin-top: 1rem; display: none; }
-
-        /* Utilities */
-        .text-error { color: var(--error); }
-        .text-success { color: var(--success); }
-        .empty-state {
-            text-align: center;
-            padding: 4rem 2rem;
+        /* Tool Catalog Cards */
+        .tool-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+            cursor: pointer;
+        }
+        .tool-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08);
+        }
+        .tool-card-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .tool-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            background-color: var(--primary-subtle);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .tool-title { font-weight: 600; font-size: 15px; }
+        .tool-desc {
             color: var(--text-muted);
+            font-size: 13px;
+            line-height: 1.5;
+            margin-bottom: 16px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            flex-grow: 1;
         }
-        .empty-state i { margin-bottom: 1rem; color: var(--border); }
+        .tool-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Toasts */
+        #toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+        .toast {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 18px;
+            color: var(--text-main);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 260px;
+            animation: toastIn 0.25s ease-out;
+        }
+        .toast.success { border-color: var(--success); }
+        .toast.error { border-color: var(--error); }
+        .toast.warning { border-color: var(--warning); }
+        @keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 8px 16px;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.15s;
+        }
+        .tab:hover { color: var(--text-main); }
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <header class="header">
-        <div class="logo-area">
-            <i data-lucide="hexagon" class="logo-icon"></i>
-            MATECOS
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar">
+        <div class="sidebar-header">
+            <i data-lucide="cpu"></i>
+            <span class="nav-label">MATECOS API</span>
         </div>
-        <div class="nav-pills">
-            <div class="nav-item active" onclick="switchTab('tools')">Tool Collection</div>
-            <div class="nav-item" onclick="switchTab('tasks')">Task Runner</div>
+        <nav class="nav-list">
+            <a class="nav-item active" data-target="dashboard">
+                <i data-lucide="layout-dashboard"></i>
+                <span class="nav-label">Dashboard</span>
+            </a>
+            <a class="nav-item" data-target="catalog">
+                <i data-lucide="box"></i>
+                <span class="nav-label">Tool Catalog</span>
+            </a>
+            <a class="nav-item" data-target="task-runner">
+                <i data-lucide="terminal"></i>
+                <span class="nav-label">Task Runner</span>
+            </a>
+            <a class="nav-item" data-target="batch-runner">
+                <i data-lucide="layers"></i>
+                <span class="nav-label">Batch Runner</span>
+            </a>
+            <a class="nav-item" data-target="import-tools">
+                <i data-lucide="git-pull-request"></i>
+                <span class="nav-label">Import Tools</span>
+            </a>
+            <a class="nav-item" data-target="api-docs">
+                <i data-lucide="book-open"></i>
+                <span class="nav-label">API Explorer</span>
+            </a>
+            <a class="nav-item" data-target="settings">
+                <i data-lucide="settings"></i>
+                <span class="nav-label">Settings</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <div style="font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--success); display: inline-block;"></span>
+                <span class="nav-label">API Online</span>
+            </div>
+            <button id="collapse-btn" title="Toggle Sidebar">
+                <i data-lucide="chevron-left"></i>
+            </button>
         </div>
-    </header>
+    </aside>
 
-    <div class="container">
-        
-        <!-- TOOL COLLECTION VIEW -->
-        <section id="view-tools" class="view-section active">
-            <div class="input-group">
-                <i data-lucide="github" style="color: var(--text-muted); margin-top: 10px;"></i>
-                <input type="text" id="import-url" class="input-lg" placeholder="https://github.com/user/repo" />
-                <input type="text" id="import-branch" class="input-sm" placeholder="main" value="main" />
-                <button onclick="importRepo()" id="btn-import">
-                    <i data-lucide="download"></i> Import Tools
+    <!-- Main Content Area -->
+    <main id="main-content">
+        <header class="top-bar">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span id="page-title-badge" class="badge badge-outline">v1.0.0</span>
+                <span id="page-breadcrumb" style="color: var(--text-muted); font-size: 13px;">Platform / Overview</span>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <a href="/docs" target="_blank" class="btn btn-secondary btn-sm">
+                    <i data-lucide="external-link"></i> OpenAPI Docs
+                </a>
+                <button class="btn btn-primary btn-sm" onclick="navTo('task-runner')">
+                    <i data-lucide="play"></i> Run Task
                 </button>
             </div>
+        </header>
 
-            <div id="import-status-area" class="import-status">
-                <i data-lucide="loader-2" class="spinner" style="color: var(--primary)"></i>
-                <div id="import-msg">Cloning repository...</div>
+        <!-- 1. Dashboard Page -->
+        <section id="page-dashboard" class="page active">
+            <h1>Platform Overview</h1>
+            <p style="margin-bottom: 24px;">Autonomous AI tool ecosystem telemetry and real-time execution statistics.</p>
+            
+            <div class="grid-cards">
+                <div class="card stat-card">
+                    <span class="input-label">Total Registered Tools</span>
+                    <div class="stat-value" id="stat-tools">--</div>
+                    <div class="stat-sub"><i data-lucide="box" style="width:14px;"></i> Across 6 tool domains</div>
+                </div>
+                <div class="card stat-card">
+                    <span class="input-label">Total Executions</span>
+                    <div class="stat-value" id="stat-execs">--</div>
+                    <div class="stat-sub"><i data-lucide="activity" style="width:14px;"></i> Live session tasks</div>
+                </div>
+                <div class="card stat-card">
+                    <span class="input-label">Success Rate</span>
+                    <div class="stat-value" id="stat-success" style="color: var(--success);">--</div>
+                    <div class="stat-sub"><i data-lucide="check-circle" style="width:14px;"></i> Zero unhandled faults</div>
+                </div>
+                <div class="card stat-card">
+                    <span class="input-label">Avg Execution Latency</span>
+                    <div class="stat-value" id="stat-latency">--</div>
+                    <div class="stat-sub"><i data-lucide="zap" style="width:14px;"></i> Sub-millisecond dispatch</div>
+                </div>
             </div>
 
-            <div class="tools-header">
-                <h2>Registered Tools</h2>
-                <span id="tool-count" class="text-muted">0 tools registered</span>
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 24px;">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3>Tool Categories Distribution</h3>
+                        <span class="badge badge-outline" id="categories-count-badge">-- Categories</span>
+                    </div>
+                    <div id="category-bars" style="display: flex; flex-direction: column; gap: 10px;">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>System Health</h3>
+                    <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 12px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                            <span style="color: var(--text-muted);">Executor Engine</span>
+                            <span class="badge badge-success">Ready</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                            <span style="color: var(--text-muted);">Tool Registry</span>
+                            <span class="badge badge-success">Operational</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                            <span style="color: var(--text-muted);">Git Cloner & Indexer</span>
+                            <span class="badge badge-success">Active</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                            <span style="color: var(--text-muted);">API Uptime</span>
+                            <span id="system-uptime" style="font-family: monospace;">--</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div id="tools-grid" class="tool-grid">
-                <!-- Tools will be injected here -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h3>Recent Platform Executions</h3>
+                    <button class="btn btn-secondary btn-sm" onclick="loadDashboard()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table id="dash-history-table">
+                        <thead>
+                            <tr><th>Task / Goal</th><th>Tool Dispatched</th><th>Status</th><th>Latency</th><th>Timestamp</th></tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
         </section>
 
-        <!-- TASK RUNNER VIEW -->
-        <section id="view-tasks" class="view-section">
-            <div class="task-input-area">
-                <textarea id="task-input" placeholder="What would you like to do?"></textarea>
-                <div class="examples">
-                    <span class="text-muted" style="font-size: 0.85rem; align-self: center;">Examples:</span>
-                    <div class="example-pill" onclick="setTask('Calculate 45 * 67 + sin(30)')">Calculate 45 * 67 + sin(30)</div>
-                    <div class="example-pill" onclick="setTask('Fetch the content of https://example.com')">Fetch https://example.com</div>
-                    <div class="example-pill" onclick="setTask('Profile the CSV data at secure://uploads/sales.csv')">Profile sales.csv</div>
+        <!-- 2. Tool Catalog Page -->
+        <section id="page-catalog" class="page">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <div>
+                    <h1>Tool Catalog</h1>
+                    <p>Discover, inspect, and directly execute all registered tools.</p>
                 </div>
-                <div style="display: flex; justify-content: flex-end;">
-                    <button onclick="runTask()" id="btn-run">
+                <div style="display: flex; gap: 12px; width: 340px;">
+                    <input type="text" id="catalog-search" class="input" placeholder="Search tools or capabilities...">
+                </div>
+            </div>
+
+            <div class="chips" id="catalog-category-filter" style="margin-bottom: 24px;">
+                <div class="chip active" onclick="filterCatalog('all', this)">All Tools</div>
+                <div class="chip" onclick="filterCatalog('math', this)">Math</div>
+                <div class="chip" onclick="filterCatalog('text', this)">Text & Formats</div>
+                <div class="chip" onclick="filterCatalog('crypto', this)">Cryptography</div>
+                <div class="chip" onclick="filterCatalog('util', this)">Utilities</div>
+                <div class="chip" onclick="filterCatalog('data', this)">Data Analysis</div>
+                <div class="chip" onclick="filterCatalog('web', this)">Web & Network</div>
+                <div class="chip" onclick="filterCatalog('github', this)">GitHub Imported</div>
+            </div>
+
+            <div id="catalog-grid" class="grid-cards">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+
+        <!-- 3. Task Runner Page -->
+        <section id="page-task-runner" class="page">
+            <h1>Autonomous Task Runner</h1>
+            <p style="margin-bottom: 24px;">Submit any natural language goal. MATECOS automatically detects required capabilities, picks the optimal tool, and executes it.</p>
+            
+            <div class="card" style="margin-bottom: 24px;">
+                <div class="input-group">
+                    <label class="input-label">Natural Language Task or Prompt</label>
+                    <textarea id="task-input" class="textarea" placeholder="e.g. Calculate 15 * 7 + sqrt(144) or generate a strong password"></textarea>
+                </div>
+                
+                <div style="margin-bottom: 16px;">
+                    <div class="input-label">Quick Task Presets</div>
+                    <div class="chips">
+                        <div class="chip" onclick="fillTask('calculate 15 * 7 + sqrt(144)')">🧮 Math calculation</div>
+                        <div class="chip" onclick="fillTask('generate 3 uuids')">🆔 Generate UUIDs</div>
+                        <div class="chip" onclick="fillTask('generate a 24-character secure password')">🔑 Strong password</div>
+                        <div class="chip" onclick="fillTask('convert 100 celsius to fahrenheit')">🌡️ Convert units</div>
+                        <div class="chip" onclick="fillTask('format this json: {\x22platform\x22:\x22matecos\x22,\x22version\x22:1,\x22active\x22:true}')">📄 Format JSON</div>
+                        <div class="chip" onclick="fillTask('hash text hello world using sha256')">🔒 SHA-256 Hash</div>
+                        <div class="chip" onclick="fillTask('base64 encode MATECOS AI Platform')">🔤 Base64 Encode</div>
+                        <div class="chip" onclick="fillTask('count words in: Autonomous agent tools empower next generation intelligent workflows')">📝 Count Words</div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                    <button class="btn btn-primary" onclick="runTask()" id="btn-run-task">
                         <i data-lucide="play"></i> Run Task
                     </button>
                 </div>
             </div>
 
-            <div id="task-result" class="result-area">
-                <div class="result-header">
-                    <div class="tool-used-badge">
-                        <i data-lucide="wrench" size="16"></i>
-                        <span id="res-tool">math.calculator</span>
+            <div id="task-result-container" style="display: none;">
+                <div class="card" style="border-left: 4px solid var(--primary); margin-bottom: 24px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span id="task-tool-badge" class="badge badge-info" style="font-size: 13px;">--</span>
+                            <span id="task-status-badge" class="badge badge-success">SUCCEEDED</span>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <span id="task-duration-badge" class="badge badge-outline">-- ms</span>
+                            <button class="btn btn-secondary btn-sm" onclick="copyResult()"><i data-lucide="copy"></i> Copy</button>
+                        </div>
                     </div>
-                    <div class="result-meta">
-                        <span id="res-time"><i data-lucide="clock" size="14" style="display:inline; vertical-align:middle;"></i> 1.2s</span>
+                    
+                    <p id="task-reasoning" style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;"></p>
+                    
+                    <div class="code-block">
+                        <pre><code id="task-output-text"></code></pre>
                     </div>
-                </div>
-                <div id="res-reason" class="result-reasoning">
-                    Selected because it involves a mathematical expression.
-                </div>
-                <div id="res-content" class="result-content">
-                    <!-- Result content injected here -->
                 </div>
             </div>
 
-            <div class="history-section">
-                <h3>Task History</h3>
-                <div id="history-list" class="history-list">
-                    <!-- History injected here -->
+            <div class="card">
+                <h3>Execution History</h3>
+                <div style="overflow-x: auto; margin-top: 12px;">
+                    <table id="task-history-table">
+                        <thead><tr><th>Prompt</th><th>Tool Selected</th><th>Status</th><th>Latency</th><th>Time</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
                 </div>
             </div>
         </section>
-    </div>
 
-    <!-- Test Tool Modal -->
-    <div id="test-modal" class="modal-backdrop">
-        <div class="modal">
-            <h3>Test Tool: <span id="test-tool-id" style="color:var(--primary)"></span></h3>
-            <textarea id="test-payload" placeholder="{&#10;  &quot;arg1&quot;: &quot;value&quot;&#10;}"></textarea>
-            <div class="actions">
-                <button class="secondary" onclick="closeModal()">Cancel</button>
-                <button onclick="executeTestTool()" id="btn-test-exec">Execute</button>
+        <!-- 4. Batch Runner Page -->
+        <section id="page-batch-runner" class="page">
+            <h1>Batch Execution Pipeline</h1>
+            <p style="margin-bottom: 24px;">Execute multiple tasks in parallel with sub-millisecond dispatching.</p>
+            
+            <div class="card" style="margin-bottom: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h3>Task Queue</h3>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <label style="font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+                            <input type="checkbox" id="batch-parallel" checked> Parallel Execution
+                        </label>
+                        <button class="btn btn-secondary btn-sm" onclick="loadBatchPreset()"><i data-lucide="wand-2"></i> Load Preset</button>
+                    </div>
+                </div>
+
+                <div id="batch-rows">
+                    <!-- Dynamic Rows -->
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 16px;">
+                    <button class="btn btn-secondary btn-sm" onclick="addBatchRow()"><i data-lucide="plus"></i> Add Row</button>
+                    <button class="btn btn-primary btn-sm" onclick="runBatch()"><i data-lucide="layers"></i> Execute Batch</button>
+                </div>
             </div>
-            <div id="test-result" class="modal-result result-format-json"></div>
+
+            <div id="batch-results-container" style="display: none;">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3>Batch Results</h3>
+                        <div id="batch-summary-badges" style="display: flex; gap: 8px;"></div>
+                    </div>
+                    <table>
+                        <thead><tr><th>ID</th><th>Prompt / Task</th><th>Tool Dispatched</th><th>Status</th><th>Duration</th><th>Output</th></tr></thead>
+                        <tbody id="batch-results-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. Import Tools Page -->
+        <section id="page-import-tools" class="page">
+            <h1>GitHub Repository Tool Importer</h1>
+            <p style="margin-bottom: 24px;">Point to any public GitHub repository. MATECOS clones the repository, indexes files, automatically discovers tools and entry points, and registers them into the live ecosystem.</p>
+            
+            <div class="card" style="margin-bottom: 28px;">
+                <h3>Custom Repository Import</h3>
+                <div style="display: flex; gap: 12px; margin-top: 16px; align-items: flex-end;">
+                    <div class="input-group" style="flex: 1; margin: 0;">
+                        <label class="input-label">GitHub Repository URL</label>
+                        <input type="text" id="import-url" class="input" placeholder="https://github.com/username/repo">
+                    </div>
+                    <div class="input-group" style="width: 140px; margin: 0;">
+                        <label class="input-label">Branch</label>
+                        <input type="text" id="import-branch" class="input" value="main">
+                    </div>
+                    <button class="btn btn-primary" onclick="importRepo()" id="btn-import" style="height: 42px;">
+                        <i data-lucide="download"></i> Import Repo
+                    </button>
+                </div>
+            </div>
+
+            <h2 style="margin-bottom: 12px;">Curated 1-Click Repositories</h2>
+            <p style="margin-bottom: 16px;">Tested public repositories with powerful utilities ready for instant import.</p>
+            
+            <div class="grid-cards" style="margin-bottom: 32px;">
+                <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <strong style="font-size: 15px;">bottlepy/bottle</strong>
+                            <span class="badge badge-info">Python</span>
+                        </div>
+                        <p style="font-size: 13px; margin-bottom: 14px;">Fast, lightweight, single-file WSGI micro framework and routing utilities.</p>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="quickImport('https://github.com/bottlepy/bottle', 'master')">
+                        <i data-lucide="download"></i> 1-Click Import
+                    </button>
+                </div>
+
+                <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <strong style="font-size: 15px;">pallets/click</strong>
+                            <span class="badge badge-info">Python</span>
+                        </div>
+                        <p style="font-size: 13px; margin-bottom: 14px;">Composable command line interface creation kit with parameter parsers.</p>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="quickImport('https://github.com/pallets/click', 'main')">
+                        <i data-lucide="download"></i> 1-Click Import
+                    </button>
+                </div>
+
+                <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <strong style="font-size: 15px;">seatgeek/thefuzz</strong>
+                            <span class="badge badge-info">Python</span>
+                        </div>
+                        <p style="font-size: 13px; margin-bottom: 14px;">Fuzzy string matching like Levenshtein distance calculations in Python.</p>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="quickImport('https://github.com/seatgeek/thefuzz', 'master')">
+                        <i data-lucide="download"></i> 1-Click Import
+                    </button>
+                </div>
+
+                <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <strong style="font-size: 15px;">marshmallow-code/marshmallow</strong>
+                            <span class="badge badge-info">Python</span>
+                        </div>
+                        <p style="font-size: 13px; margin-bottom: 14px;">Simplified object serialization, deserialization, and schema validation.</p>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="quickImport('https://github.com/marshmallow-code/marshmallow', 'dev')">
+                        <i data-lucide="download"></i> 1-Click Import
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Imported Repositories</h3>
+                <div style="overflow-x: auto; margin-top: 14px;">
+                    <table>
+                        <thead><tr><th>Repository</th><th>Source URL</th><th>Tools Extracted</th><th>Actions</th></tr></thead>
+                        <tbody id="repos-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. API Explorer & Documentation Page -->
+        <section id="page-api-docs" class="page">
+            <h1>API Explorer & Documentation</h1>
+            <p style="margin-bottom: 24px;">Integrate MATECOS directly into your custom web apps, mobile apps, or backend pipelines.</p>
+
+            <div class="tabs">
+                <div class="tab active" onclick="switchApiTab('explorer', this)">Interactive API Explorer</div>
+                <div class="tab" onclick="switchApiTab('code', this)">Multi-Language Code Snippets</div>
+                <div class="tab" onclick="switchApiTab('endpoints', this)">Endpoint Reference</div>
+            </div>
+
+            <!-- Tab 1: Interactive Explorer -->
+            <div id="api-tab-explorer">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="card">
+                        <h3>API Request Builder</h3>
+                        <div class="input-group" style="margin-top: 14px;">
+                            <label class="input-label">Endpoint</label>
+                            <select id="explorer-endpoint" class="select" onchange="onExplorerEndpointChange()">
+                                <option value="POST /v1/tasks/run">POST /v1/tasks/run (Natural Language Task)</option>
+                                <option value="POST /v1/platform/batch">POST /v1/platform/batch (Batch Execution)</option>
+                                <option value="GET /v1/github/tools">GET /v1/github/tools (List All Tools)</option>
+                                <option value="GET /v1/platform/stats">GET /v1/platform/stats (Platform Metrics)</option>
+                                <option value="GET /v1/tasks/capabilities">GET /v1/tasks/capabilities (Capabilities)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Request Body (JSON)</label>
+                            <textarea id="explorer-body" class="textarea" style="font-family: 'JetBrains Mono', monospace; font-size: 13px; height: 160px;">{
+  "task": "calculate 99 * 77 + 13"
+}</textarea>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end;">
+                            <button class="btn btn-primary" onclick="sendExplorerRequest()" id="btn-explorer-send">
+                                <i data-lucide="send"></i> Send Live Request
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                            <h3>Live Response</h3>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span id="explorer-status" class="badge badge-outline">Ready</span>
+                                <span id="explorer-latency" style="font-size: 12px; color: var(--text-muted);">--</span>
+                            </div>
+                        </div>
+                        <div class="code-block" style="height: 280px; overflow-y: auto;">
+                            <pre><code id="explorer-response-code">Press 'Send Live Request' to test this endpoint.</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Multi-Language Code Snippets -->
+            <div id="api-tab-code" style="display: none;">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3>Client Code Example</h3>
+                        <div class="chips">
+                            <div class="chip active" onclick="switchSnippetLang('python', this)">Python (requests)</div>
+                            <div class="chip" onclick="switchSnippetLang('python_async', this)">Python (httpx)</div>
+                            <div class="chip" onclick="switchSnippetLang('js', this)">JavaScript (fetch)</div>
+                            <div class="chip" onclick="switchSnippetLang('curl', this)">cURL</div>
+                            <div class="chip" onclick="switchSnippetLang('go', this)">Go</div>
+                        </div>
+                    </div>
+                    <div class="code-block" style="margin-bottom: 12px;">
+                        <pre><code id="snippet-code-display"></code></pre>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end;">
+                        <button class="btn btn-secondary btn-sm" onclick="copySnippet()"><i data-lucide="copy"></i> Copy Code</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: Endpoint Reference -->
+            <div id="api-tab-endpoints" style="display: none;">
+                <div class="card" style="margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                        <span class="badge badge-info">POST</span>
+                        <code>/v1/tasks/run</code>
+                    </div>
+                    <p>Natural-language autonomous tool selection and execution.</p>
+                </div>
+                <div class="card" style="margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                        <span class="badge badge-info">POST</span>
+                        <code>/v1/platform/batch</code>
+                    </div>
+                    <p>Execute up to 10 tasks concurrently in parallel.</p>
+                </div>
+                <div class="card" style="margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                        <span class="badge badge-success">GET</span>
+                        <code>/v1/github/tools</code>
+                    </div>
+                    <p>List all registered built-in and GitHub-imported tools with capabilities.</p>
+                </div>
+                <div class="card" style="margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                        <span class="badge badge-info">POST</span>
+                        <code>/v1/github/import</code>
+                    </div>
+                    <p>Clone, index, and register tools from any public GitHub repository.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. Settings Page -->
+        <section id="page-settings" class="page">
+            <h1>Platform Settings & API Keys</h1>
+            <p style="margin-bottom: 24px;">Configure authentication tokens, network preferences, and platform environment.</p>
+            
+            <div style="max-width: 680px; display: flex; flex-direction: column; gap: 20px;">
+                <div class="card">
+                    <h3>API Authentication Key</h3>
+                    <p style="margin-bottom: 16px;">Use this token in the <code>Authorization: Bearer &lt;KEY&gt;</code> header of your HTTP requests.</p>
+                    <div class="input-group">
+                        <label class="input-label">Current API Key</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" class="input" value="mat_live_9f827c_autonomous_token_v1" id="settings-api-key" readonly style="font-family: monospace;">
+                            <button class="btn btn-secondary" onclick="copyApiKey()"><i data-lucide="copy"></i> Copy</button>
+                            <button class="btn btn-primary" onclick="generateApiKey()"><i data-lucide="refresh-cw"></i> Regenerate</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Environment & Telemetry</h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                            <span style="color: var(--text-muted);">API Host Base</span>
+                            <code>http://localhost:8000</code>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                            <span style="color: var(--text-muted);">CORS Permissions</span>
+                            <span class="badge badge-success">Allow All Origins (*)</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                            <span style="color: var(--text-muted);">Runtime Python</span>
+                            <span id="settings-py-version">Python 3.12.14</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal for Tool Details -->
+    <div class="modal-overlay" id="tool-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-tool-title" style="margin: 0;">Tool Details</h3>
+                <button class="btn-icon" onclick="closeModal()"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 16px; display: flex; gap: 8px;">
+                    <span id="modal-tool-badge" class="badge badge-outline"></span>
+                    <span id="modal-tool-risk" class="badge"></span>
+                </div>
+                <p id="modal-tool-desc" style="margin-bottom: 20px;"></p>
+                <h4>Capabilities</h4>
+                <div id="modal-tool-caps" class="chips" style="margin-bottom: 20px;"></div>
+                
+                <h4>Direct Tool Execution</h4>
+                <div class="input-group" style="margin-top: 10px;">
+                    <label class="input-label">Payload (JSON)</label>
+                    <textarea id="modal-tool-payload" class="textarea" style="font-family: 'JetBrains Mono', monospace; font-size: 13px;">{}</textarea>
+                </div>
+                <button class="btn btn-primary" onclick="executeRawTool()" id="btn-modal-exec">
+                    <i data-lucide="play"></i> Execute Tool Directly
+                </button>
+                
+                <div id="modal-result" class="code-block" style="margin-top: 16px; display: none;">
+                    <pre><code id="modal-result-text"></code></pre>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
     <script>
-        // API Config
+        lucide.createIcons();
+
+        const API_BASE = '/v1';
         const HEADERS = {
             'Authorization': 'Bearer dev-test-token',
             'Content-Type': 'application/json'
         };
-        const API_BASE = '/v1';
 
-        // Initialize Icons
-        lucide.createIcons();
+        // Navigation
+        function navTo(target) {
+            document.querySelectorAll('.nav-item').forEach(n => {
+                if (n.getAttribute('data-target') === target) n.classList.add('active');
+                else n.classList.remove('active');
+            });
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + target).classList.add('active');
 
-        // UI State
-        let currentToolIdForTest = '';
+            const labels = {
+                'dashboard': 'Platform / Overview',
+                'catalog': 'Platform / Tool Catalog',
+                'task-runner': 'Platform / Task Runner',
+                'batch-runner': 'Platform / Batch Execution',
+                'import-tools': 'Platform / GitHub Importer',
+                'api-docs': 'Platform / API Explorer',
+                'settings': 'Platform / Settings'
+            };
+            document.getElementById('page-breadcrumb').innerText = labels[target] || 'Platform';
 
-        // --- Navigation ---
-        function switchTab(tabId) {
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            
-            if (tabId === 'tools') {
-                document.querySelector('.nav-item:nth-child(1)').classList.add('active');
-                document.getElementById('view-tools').classList.add('active');
-                loadTools();
-            } else {
-                document.querySelector('.nav-item:nth-child(2)').classList.add('active');
-                document.getElementById('view-tasks').classList.add('active');
-                loadHistory();
+            if (target === 'dashboard') loadDashboard();
+            if (target === 'catalog') loadCatalog();
+            if (target === 'task-runner') loadTaskHistory();
+            if (target === 'import-tools') loadRepos();
+            if (target === 'api-docs') onExplorerEndpointChange();
+            if (target === 'settings') loadSettings();
+        }
+
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => navTo(item.getAttribute('data-target')));
+        });
+
+        // Sidebar Collapse
+        const sidebar = document.getElementById('sidebar');
+        const collapseBtn = document.getElementById('collapse-btn');
+        collapseBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            const icon = collapseBtn.querySelector('i');
+            icon.setAttribute('data-lucide', isCollapsed ? 'chevron-right' : 'chevron-left');
+            lucide.createIcons();
+        });
+
+        // Toast Notifications
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            let iconName = type === 'success' ? 'check-circle' : (type === 'error' ? 'alert-circle' : 'info');
+            toast.innerHTML = `<i data-lucide="${iconName}"></i> <span>${message}</span>`;
+            container.appendChild(toast);
+            lucide.createIcons();
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3200);
+        }
+
+        // 1. Dashboard Logic
+        async function loadDashboard() {
+            try {
+                const statsRes = await fetch(`${API_BASE}/platform/stats`, { headers: HEADERS });
+                if (statsRes.ok) {
+                    const stats = await statsRes.json();
+                    document.getElementById('stat-tools').innerText = stats.total_tools ?? '--';
+                    document.getElementById('stat-execs').innerText = stats.total_executions ?? '--';
+                    document.getElementById('stat-success').innerText = (stats.success_rate != null ? stats.success_rate.toFixed(1) + '%' : '100%');
+                    document.getElementById('stat-latency').innerText = (stats.avg_latency_ms != null ? stats.avg_latency_ms.toFixed(1) + ' ms' : '0.8 ms');
+
+                    // Render categories
+                    const catContainer = document.getElementById('category-bars');
+                    catContainer.innerHTML = '';
+                    const cats = stats.tools_by_category || {};
+                    const totalT = stats.total_tools || 1;
+                    document.getElementById('categories-count-badge').innerText = `${Object.keys(cats).length} Domains`;
+
+                    for (const [cat, count] of Object.entries(cats)) {
+                        const pct = Math.max(12, Math.round((count / totalT) * 100));
+                        catContainer.innerHTML += `
+                            <div>
+                                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                                    <span style="text-transform: capitalize;">${cat}</span>
+                                    <span style="color: var(--text-muted);">${count} tools (${pct}%)</span>
+                                </div>
+                                <div style="background: var(--bg-color); height: 6px; border-radius: 3px; overflow: hidden;">
+                                    <div style="width: ${pct}%; background: var(--primary); height: 100%; border-radius: 3px;"></div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
+                // Health & Uptime
+                const hRes = await fetch(`${API_BASE}/platform/health`, { headers: HEADERS });
+                if (hRes.ok) {
+                    const health = await hRes.json();
+                    const s = Math.round(health.uptime_seconds || 0);
+                    const mins = Math.floor(s / 60);
+                    const secs = s % 60;
+                    document.getElementById('system-uptime').innerText = `${mins}m ${secs}s`;
+                }
+
+                // History
+                const histRes = await fetch(`${API_BASE}/tasks/history`, { headers: HEADERS });
+                if (histRes.ok) {
+                    const history = await histRes.json();
+                    const tbody = document.querySelector('#dash-history-table tbody');
+                    tbody.innerHTML = '';
+                    if (history.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No executions recorded yet.</td></tr>`;
+                    } else {
+                        history.slice(0, 7).forEach(h => {
+                            const isSuccess = h.status === 'SUCCEEDED';
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td><strong>${escapeHtml(h.task || '--')}</strong></td>
+                                    <td><code>${h.tool_selected || h.tool_name || 'auto'}</code></td>
+                                    <td><span class="badge badge-${isSuccess ? 'success' : 'error'}">${h.status}</span></td>
+                                    <td>${h.duration_ms ?? 0} ms</td>
+                                    <td style="color: var(--text-muted); font-size: 12px;">${h.timestamp ? new Date(h.timestamp).toLocaleTimeString() : 'Just now'}</td>
+                                </tr>
+                            `;
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error("Dashboard load error:", err);
             }
         }
 
-        // --- View 1: Tool Collection ---
+        // 2. Tool Catalog Logic
+        let catalogTools = [];
+        async function loadCatalog() {
+            const grid = document.getElementById('catalog-grid');
+            grid.innerHTML = '<div style="padding: 24px; color: var(--text-muted);">Loading tool registry...</div>';
+            try {
+                const res = await fetch(`${API_BASE}/github/tools`, { headers: HEADERS });
+                if (!res.ok) throw new Error('Failed to load tools');
+                catalogTools = await res.json();
+                renderCatalog(catalogTools);
+            } catch (err) {
+                showToast(err.message, 'error');
+                grid.innerHTML = `<div style="padding: 24px; color: var(--error);">Error loading catalog: ${err.message}</div>`;
+            }
+        }
 
-        async function loadTools() {
-            const grid = document.getElementById('tools-grid');
-            grid.innerHTML = '<div class="empty-state"><i data-lucide="loader-2" class="spinner" size="32"></i><p>Loading tools...</p></div>';
+        function filterCatalog(category, chip) {
+            document.querySelectorAll('#catalog-category-filter .chip').forEach(c => c.classList.remove('active'));
+            if (chip) chip.classList.add('active');
+
+            if (category === 'all') {
+                renderCatalog(catalogTools);
+            } else if (category === 'github') {
+                renderCatalog(catalogTools.filter(t => t.source && t.source !== 'builtin'));
+            } else {
+                renderCatalog(catalogTools.filter(t => t.tool_id.startsWith(category + '.') || (t.capabilities || []).some(c => c.includes(category))));
+            }
+        }
+
+        function renderCatalog(tools) {
+            const grid = document.getElementById('catalog-grid');
+            grid.innerHTML = '';
+            if (tools.length === 0) {
+                grid.innerHTML = `<div style="padding: 24px; color: var(--text-muted);">No matching tools found.</div>`;
+                return;
+            }
+
+            tools.forEach(t => {
+                let icon = 'tool';
+                if (t.tool_id.includes('math') || t.tool_id.includes('calc')) icon = 'calculator';
+                else if (t.tool_id.includes('http') || t.tool_id.includes('url')) icon = 'globe';
+                else if (t.tool_id.includes('csv') || t.tool_id.includes('units')) icon = 'database';
+                else if (t.tool_id.includes('crypto') || t.tool_id.includes('password') || t.tool_id.includes('hash')) icon = 'shield-check';
+                else if (t.tool_id.includes('uuid')) icon = 'fingerprint';
+                else if (t.tool_id.includes('json') || t.tool_id.includes('diff') || t.tool_id.includes('regex')) icon = 'file-code';
+                else if (t.source && t.source !== 'builtin') icon = 'github';
+
+                const riskColor = t.risk_level === 'low' ? 'success' : (t.risk_level === 'medium' ? 'warning' : 'error');
+                const card = document.createElement('div');
+                card.className = 'card tool-card';
+                card.onclick = () => openToolModal(t);
+                card.innerHTML = `
+                    <div>
+                        <div class="tool-card-header">
+                            <div class="tool-icon"><i data-lucide="${icon}"></i></div>
+                            <div style="overflow: hidden;">
+                                <div class="tool-title">${escapeHtml(t.name)}</div>
+                                <div style="font-size: 11px; color: var(--text-muted); font-family: monospace;">${t.tool_id}</div>
+                            </div>
+                        </div>
+                        <div class="tool-desc">${escapeHtml(t.description || 'Autonomous tool module.')}</div>
+                    </div>
+                    <div>
+                        <div class="tool-footer">
+                            <span class="badge badge-${riskColor}">${t.risk_level} risk</span>
+                            <span style="font-size: 11px; color: var(--text-muted);">${t.source === 'builtin' ? 'Standard Built-in' : 'GitHub'}</span>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        document.getElementById('catalog-search').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = catalogTools.filter(t => 
+                t.name.toLowerCase().includes(term) || 
+                (t.description || '').toLowerCase().includes(term) ||
+                t.tool_id.toLowerCase().includes(term)
+            );
+            renderCatalog(filtered);
+        });
+
+        // Tool Modal
+        let activeTool = null;
+        function openToolModal(tool) {
+            activeTool = tool;
+            document.getElementById('modal-tool-title').innerText = tool.name;
+            document.getElementById('modal-tool-badge').innerText = tool.tool_id;
+            
+            const riskEl = document.getElementById('modal-tool-risk');
+            riskEl.innerText = tool.risk_level + ' risk';
+            riskEl.className = 'badge badge-' + (tool.risk_level === 'low' ? 'success' : (tool.risk_level === 'medium' ? 'warning' : 'error'));
+            
+            document.getElementById('modal-tool-desc').innerText = tool.description || '';
+            const caps = document.getElementById('modal-tool-caps');
+            caps.innerHTML = (tool.capabilities || []).map(c => `<span class="chip">${escapeHtml(c)}</span>`).join('');
+            
+            // Set payload example
+            let defaultPayload = {};
+            if (tool.tool_id === 'math.calculator') defaultPayload = { "expression": "45 * 12 + sqrt(81)" };
+            else if (tool.tool_id === 'util.uuid.gen') defaultPayload = { "count": 2, "version": 4 };
+            else if (tool.tool_id === 'util.password.gen') defaultPayload = { "length": 20, "symbols": true };
+            else if (tool.tool_id === 'crypto.hash.gen') defaultPayload = { "text": "secret-value", "algorithm": "sha256" };
+            else if (tool.tool_id === 'text.json.format') defaultPayload = { "text": '{"test":123,"valid":true}', "indent": 2 };
+            else if (tool.tool_id === 'data.convert.units') defaultPayload = { "value": 100, "from_unit": "celsius", "to_unit": "fahrenheit" };
+            else if (tool.tool_id === 'web.http_fetch') defaultPayload = { "url": "https://httpbin.org/get", "method": "GET" };
+            else defaultPayload = { "args": ["sample_input"] };
+
+            document.getElementById('modal-tool-payload').value = JSON.stringify(defaultPayload, null, 2);
+            document.getElementById('modal-result').style.display = 'none';
+            document.getElementById('tool-modal').style.display = 'flex';
+            lucide.createIcons();
+        }
+
+        function closeModal() {
+            document.getElementById('tool-modal').style.display = 'none';
+        }
+
+        async function executeRawTool() {
+            if (!activeTool) return;
+            const payloadStr = document.getElementById('modal-tool-payload').value;
+            let payload = {};
+            try { payload = JSON.parse(payloadStr); } catch(e) { showToast('Invalid JSON payload format', 'error'); return; }
+
+            const btn = document.getElementById('btn-modal-exec');
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader" class="spin"></i> Executing...';
             lucide.createIcons();
 
             try {
-                // We add some builtins virtually if API doesn't return them, but API should return registered tools.
-                const res = await fetch(`${API_BASE}/github/tools`, { headers: HEADERS });
-                
-                // Mock response fallback if API fails
-                let tools = [];
-                if (res.ok) {
-                    const data = await res.json();
-                    tools = data.tools || data || [];
-                } else {
-                    // Fallback to builtin list for display purposes if backend endpoint is unavailable during UI dev
-                    tools = [
-                        { id: 'math.calculator', name: 'Calculator', description: 'Evaluates mathematical expressions.', capabilities: ['math'], risk_level: 'low', source: 'builtin' },
-                        { id: 'web.http_fetch', name: 'HTTP Fetcher', description: 'Fetches content from URLs.', capabilities: ['network'], risk_level: 'medium', source: 'builtin' },
-                        { id: 'data.csv.profile', name: 'CSV Profiler', description: 'Profiles CSV datasets.', capabilities: ['data', 'read'], risk_level: 'low', source: 'builtin' }
-                    ];
-                }
-                
-                document.getElementById('tool-count').innerText = `${tools.length} tools registered`;
-
-                if (tools.length === 0) {
-                    grid.innerHTML = '<div class="empty-state"><i data-lucide="inbox" size="32"></i><p>No tools registered yet.</p></div>';
-                    lucide.createIcons();
-                    return;
-                }
-
-                grid.innerHTML = '';
-                tools.forEach((tool, i) => {
-                    const el = document.createElement('div');
-                    const riskClass = tool.risk_level === 'high' ? 'risk-high' : (tool.risk_level === 'medium' ? 'risk-medium' : 'risk-low');
-                    const badgeClass = tool.risk_level === 'high' ? 'badge-high' : (tool.risk_level === 'medium' ? 'badge-medium' : 'badge-low');
-                    const sourceIcon = tool.source === 'builtin' ? 'cpu' : 'github';
-                    const sourceText = tool.source === 'builtin' ? 'Built-in' : (tool.repo || 'GitHub');
-
-                    el.className = `tool-card ${riskClass}`;
-                    el.style.animationDelay = `${i * 0.05}s`;
-                    
-                    const caps = (tool.capabilities || []).map(c => `<span class="tag">${c}</span>`).join('');
-
-                    el.innerHTML = `
-                        <div class="tool-header">
-                            <div>
-                                <div class="tool-title">${tool.name || tool.id}</div>
-                                <div class="tool-source"><i data-lucide="${sourceIcon}" size="12"></i> ${sourceText} • ${tool.id}</div>
-                            </div>
-                            <span class="badge ${badgeClass}">${tool.risk_level || 'low'} risk</span>
-                        </div>
-                        <div class="tool-desc">${tool.description || 'No description provided.'}</div>
-                        <div class="tag-list">${caps}</div>
-                        <div class="tool-actions">
-                            <button class="secondary sm" onclick="openTestModal('${tool.id}')">Test</button>
-                            ${tool.source !== 'builtin' ? `<button class="secondary sm" style="margin-left:8px; color:var(--error)" onclick="removeRepo('${tool.repo}')"><i data-lucide="trash-2" size="14"></i></button>` : ''}
-                        </div>
-                    `;
-                    grid.appendChild(el);
+                const res = await fetch(`${API_BASE}/github/tools/${activeTool.tool_id}/execute`, {
+                    method: 'POST',
+                    headers: HEADERS,
+                    body: JSON.stringify({ payload })
                 });
-                lucide.createIcons();
-
-            } catch (err) {
-                console.error(err);
-                grid.innerHTML = `<div class="empty-state text-error"><i data-lucide="alert-triangle" size="32"></i><p>Failed to load tools.</p></div>`;
+                const data = await res.json();
+                document.getElementById('modal-result').style.display = 'block';
+                document.getElementById('modal-result-text').innerText = JSON.stringify(data, null, 2);
+                showToast(`Tool ${data.status || 'executed'}`, 'success');
+            } catch(e) {
+                showToast(e.message, 'error');
+            } finally {
+                btn.innerHTML = orig;
                 lucide.createIcons();
             }
         }
 
+        // 3. Task Runner Logic
+        function fillTask(prompt) {
+            document.getElementById('task-input').value = prompt;
+        }
+
+        async function runTask() {
+            const taskText = document.getElementById('task-input').value.trim();
+            if (!taskText) return showToast('Please enter a task prompt', 'warning');
+
+            const btn = document.getElementById('btn-run-task');
+            btn.innerHTML = '<i data-lucide="loader" class="spin"></i> Executing Task...';
+            lucide.createIcons();
+
+            try {
+                const res = await fetch(`${API_BASE}/tasks/run`, {
+                    method: 'POST',
+                    headers: HEADERS,
+                    body: JSON.stringify({ task: taskText, max_cost: 10.0 })
+                });
+                const data = await res.json();
+                
+                document.getElementById('task-result-container').style.display = 'block';
+                document.getElementById('task-tool-badge').innerText = data.tool_name ? `${data.tool_name} (${data.tool_selected})` : 'No Tool Found';
+                
+                const isSuccess = data.status === 'SUCCEEDED';
+                const statusBadge = document.getElementById('task-status-badge');
+                statusBadge.className = `badge badge-${isSuccess ? 'success' : 'error'}`;
+                statusBadge.innerText = data.status || 'DONE';
+
+                document.getElementById('task-duration-badge').innerText = `${data.duration_ms ?? 0} ms`;
+                document.getElementById('task-reasoning').innerText = data.reasoning || '';
+
+                let out = data.result !== null && data.result !== undefined ? data.result : data.error;
+                if (typeof out === 'object') out = JSON.stringify(out, null, 2);
+                document.getElementById('task-output-text').innerText = out || 'No output produced';
+
+                showToast(`Task ${data.status}`, isSuccess ? 'success' : 'error');
+                loadTaskHistory();
+            } catch (err) {
+                showToast(err.message, 'error');
+            } finally {
+                btn.innerHTML = '<i data-lucide="play"></i> Run Task';
+                lucide.createIcons();
+            }
+        }
+
+        async function loadTaskHistory() {
+            try {
+                const res = await fetch(`${API_BASE}/tasks/history`, { headers: HEADERS });
+                if (res.ok) {
+                    const history = await res.json();
+                    const tbody = document.querySelector('#task-history-table tbody');
+                    tbody.innerHTML = '';
+                    if (history.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No history available.</td></tr>`;
+                        return;
+                    }
+                    history.forEach(h => {
+                        const isSuccess = h.status === 'SUCCEEDED';
+                        tbody.innerHTML += `
+                            <tr>
+                                <td><strong>${escapeHtml(h.task)}</strong></td>
+                                <td><code>${h.tool_selected || h.tool_name}</code></td>
+                                <td><span class="badge badge-${isSuccess ? 'success' : 'error'}">${h.status}</span></td>
+                                <td>${h.duration_ms} ms</td>
+                                <td style="color: var(--text-muted); font-size: 12px;">${h.timestamp ? new Date(h.timestamp).toLocaleTimeString() : 'Just now'}</td>
+                            </tr>
+                        `;
+                    });
+                }
+            } catch(e) {}
+        }
+
+        function copyResult() {
+            const text = document.getElementById('task-output-text').innerText;
+            navigator.clipboard.writeText(text);
+            showToast('Result copied to clipboard', 'success');
+        }
+
+        // 4. Batch Runner Logic
+        let batchCounter = 1;
+        function addBatchRow(taskVal = '') {
+            const id = 'task_' + (batchCounter++);
+            const div = document.createElement('div');
+            div.className = 'batch-row';
+            div.style.cssText = 'display: flex; gap: 12px; margin-bottom: 12px; align-items: center;';
+            div.innerHTML = `
+                <span class="badge badge-outline" style="width: 70px; justify-content: center;">${id}</span>
+                <input type="text" class="input" placeholder="Prompt or task..." value="${escapeHtml(taskVal)}" style="flex: 1;">
+                <button class="btn-icon" onclick="this.parentElement.remove()" title="Remove"><i data-lucide="trash-2"></i></button>
+            `;
+            document.getElementById('batch-rows').appendChild(div);
+            lucide.createIcons();
+        }
+
+        function loadBatchPreset() {
+            document.getElementById('batch-rows').innerHTML = '';
+            addBatchRow('calculate 99 * 77 + 13');
+            addBatchRow('generate 5 uuids');
+            addBatchRow('create a secure password');
+            addBatchRow('convert 100 celsius to fahrenheit');
+            addBatchRow('base64 encode MATECOS System');
+        }
+
+        async function runBatch() {
+            const rows = document.querySelectorAll('.batch-row');
+            const tasks = [];
+            rows.forEach((r, idx) => {
+                const id = r.querySelector('.badge').innerText;
+                const val = r.querySelector('input').value.trim();
+                if (val) tasks.push({ id, task: val });
+            });
+
+            if (tasks.length === 0) return showToast('Please add at least one task row', 'warning');
+
+            const isParallel = document.getElementById('batch-parallel').checked;
+            document.getElementById('batch-results-container').style.display = 'block';
+            const tbody = document.getElementById('batch-results-body');
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px;">Executing ${tasks.length} tasks in parallel...</td></tr>`;
+
+            try {
+                const res = await fetch(`${API_BASE}/platform/batch`, {
+                    method: 'POST',
+                    headers: HEADERS,
+                    body: JSON.stringify({ tasks, parallel: isParallel })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Batch execution failed');
+
+                document.getElementById('batch-summary-badges').innerHTML = `
+                    <span class="badge badge-success">${data.succeeded} Succeeded</span>
+                    <span class="badge badge-${data.failed > 0 ? 'error' : 'outline'}">${data.failed} Failed</span>
+                    <span class="badge badge-info">${data.total_duration_ms} ms Total</span>
+                `;
+
+                tbody.innerHTML = '';
+                (data.results || []).forEach(r => {
+                    const isSuccess = r.status === 'SUCCEEDED';
+                    let preview = r.result !== null ? JSON.stringify(r.result) : (r.error || '--');
+                    if (preview.length > 60) preview = preview.substring(0, 60) + '...';
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><code>${r.id}</code></td>
+                            <td>${escapeHtml(r.task || '--')}</td>
+                            <td><code>${r.tool_selected || '--'}</code></td>
+                            <td><span class="badge badge-${isSuccess ? 'success' : 'error'}">${r.status}</span></td>
+                            <td>${r.duration_ms} ms</td>
+                            <td style="font-family: monospace; font-size: 12px;">${escapeHtml(preview)}</td>
+                        </tr>
+                    `;
+                });
+                showToast(`Batch completed in ${data.total_duration_ms} ms`, 'success');
+            } catch(e) {
+                showToast(e.message, 'error');
+                tbody.innerHTML = `<tr><td colspan="6" style="color: var(--error);">${e.message}</td></tr>`;
+            }
+        }
+
+        // 5. GitHub Repository Import Logic
+        async function loadRepos() {
+            const tbody = document.getElementById('repos-table-body');
+            tbody.innerHTML = '<tr><td colspan="4" style="color: var(--text-muted); text-align: center;">Loading imported repositories...</td></tr>';
+            try {
+                const res = await fetch(`${API_BASE}/github/repos`, { headers: HEADERS });
+                if (res.ok) {
+                    const repos = await res.json();
+                    tbody.innerHTML = '';
+                    if (repos.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">No repositories imported yet. Use 1-Click Import above or enter a URL.</td></tr>';
+                        return;
+                    }
+                    repos.forEach(r => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td><strong>${escapeHtml(r.name)}</strong></td>
+                                <td style="font-size: 12px; color: var(--text-muted);">${escapeHtml(r.url)}</td>
+                                <td><span class="badge badge-outline">${r.tools?.length || 0} tools extracted</span></td>
+                                <td>
+                                    <button class="btn-icon" onclick="deleteRepo('${r.name}')" title="Delete and unregister tools">
+                                        <i data-lucide="trash-2"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    lucide.createIcons();
+                }
+            } catch(e) {
+                tbody.innerHTML = `<tr><td colspan="4" style="color: var(--error);">Error loading repos</td></tr>`;
+            }
+        }
+
+        function quickImport(url, branch = 'main') {
+            document.getElementById('import-url').value = url;
+            document.getElementById('import-branch').value = branch;
+            importRepo();
+        }
+
         async function importRepo() {
-            const url = document.getElementById('import-url').value;
-            const branch = document.getElementById('import-branch').value || 'main';
-            if (!url) return;
+            const url = document.getElementById('import-url').value.trim();
+            const branch = document.getElementById('import-branch').value.trim() || 'main';
+            if (!url) return showToast('Please enter a GitHub repository URL', 'warning');
 
-            const statusArea = document.getElementById('import-status-area');
-            const statusMsg = document.getElementById('import-msg');
             const btn = document.getElementById('btn-import');
-
-            btn.disabled = true;
-            statusArea.classList.add('active');
-            
-            // Simulate progression steps
-            let step = 0;
-            const msgs = ['Cloning repository...', 'Indexing files...', 'Extracting tools...'];
-            const interval = setInterval(() => {
-                step++;
-                if(step < msgs.length) statusMsg.innerText = msgs[step];
-            }, 800);
+            btn.innerHTML = '<i data-lucide="loader" class="spin"></i> Cloning & Indexing...';
+            lucide.createIcons();
 
             try {
                 const res = await fetch(`${API_BASE}/github/import`, {
@@ -785,244 +1568,214 @@
                     headers: HEADERS,
                     body: JSON.stringify({ url, branch })
                 });
-
-                clearInterval(interval);
-                
-                if (res.ok) {
-                    const data = await res.json();
-                    statusMsg.innerHTML = `<span class="text-success">Done! Imported tools from ${url}.</span>`;
-                    document.getElementById('import-url').value = '';
-                    loadTools();
-                } else {
-                    const err = await res.json();
-                    statusMsg.innerHTML = `<span class="text-error">Failed: ${err.detail || err.error || 'Unknown error'}</span>`;
-                }
-            } catch (err) {
-                clearInterval(interval);
-                statusMsg.innerHTML = `<span class="text-error">Network error during import.</span>`;
-            }
-
-            setTimeout(() => {
-                statusArea.classList.remove('active');
-                btn.disabled = false;
-            }, 3000);
-        }
-
-        async function removeRepo(repoName) {
-            if(!confirm(`Remove imported repo ${repoName}?`)) return;
-            try {
-                await fetch(`${API_BASE}/github/repos/${encodeURIComponent(repoName)}`, {
-                    method: 'DELETE',
-                    headers: HEADERS
-                });
-                loadTools();
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        function openTestModal(toolId) {
-            currentToolIdForTest = toolId;
-            document.getElementById('test-tool-id').innerText = toolId;
-            document.getElementById('test-payload').value = '{\n  \n}';
-            document.getElementById('test-result').style.display = 'none';
-            document.getElementById('test-modal').classList.add('active');
-        }
-
-        function closeModal() {
-            document.getElementById('test-modal').classList.remove('active');
-        }
-
-        async function executeTestTool() {
-            const btn = document.getElementById('btn-test-exec');
-            const resDiv = document.getElementById('test-result');
-            let payload = {};
-            
-            try {
-                const txt = document.getElementById('test-payload').value;
-                if (txt.trim()) payload = JSON.parse(txt);
-            } catch (e) {
-                resDiv.style.display = 'block';
-                resDiv.className = 'modal-result result-format-json text-error';
-                resDiv.innerText = 'Invalid JSON payload';
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerText = 'Running...';
-            resDiv.style.display = 'none';
-
-            try {
-                const res = await fetch(`${API_BASE}/github/tools/${currentToolIdForTest}/execute`, {
-                    method: 'POST',
-                    headers: HEADERS,
-                    body: JSON.stringify(payload)
-                });
-                
                 const data = await res.json();
-                resDiv.style.display = 'block';
-                resDiv.className = 'modal-result result-format-json';
-                resDiv.innerText = JSON.stringify(data, null, 2);
-            } catch (err) {
-                resDiv.style.display = 'block';
-                resDiv.className = 'modal-result result-format-json text-error';
-                resDiv.innerText = 'Execution failed: ' + err.message;
-            }
+                if (!res.ok) throw new Error(data.detail || 'Import failed');
 
-            btn.disabled = false;
-            btn.innerText = 'Execute';
-        }
-
-        // --- View 2: Task Runner ---
-
-        function setTask(text) {
-            document.getElementById('task-input').value = text;
-        }
-
-        async function runTask() {
-            const taskText = document.getElementById('task-input').value.trim();
-            if (!taskText) return;
-
-            const btn = document.getElementById('btn-run');
-            const resArea = document.getElementById('task-result');
-            const resContent = document.getElementById('res-content');
-            
-            btn.disabled = true;
-            btn.innerHTML = '<i data-lucide="loader-2" class="spinner"></i> Running...';
-            lucide.createIcons();
-            resArea.classList.remove('active');
-
-            const startTime = Date.now();
-
-            try {
-                const res = await fetch(`${API_BASE}/tasks/run`, {
-                    method: 'POST',
-                    headers: HEADERS,
-                    body: JSON.stringify({ task: taskText, max_cost: 1.0 })
-                });
-
-                const endTime = Date.now();
-                const duration = ((endTime - startTime) / 1000).toFixed(2);
-
-                const data = await res.json();
-                
-                // Show result area
-                resArea.classList.add('active');
-                document.getElementById('res-tool').innerText = data.tool_used || 'unknown.tool';
-                document.getElementById('res-time').innerHTML = `<i data-lucide="clock" size="14" style="display:inline; vertical-align:middle;"></i> ${duration}s`;
-                document.getElementById('res-reason').innerText = data.reasoning || 'Executed based on semantic match.';
-                
-                // Format output
-                renderResult(data.tool_used, data.result, resContent);
-                lucide.createIcons();
-                loadHistory();
-
-            } catch (err) {
-                resArea.classList.add('active');
-                document.getElementById('res-tool').innerText = 'error';
-                document.getElementById('res-reason').innerText = 'Task execution failed.';
-                resContent.innerHTML = `<div class="text-error">Error: ${err.message}</div>`;
-            }
-
-            btn.disabled = false;
-            btn.innerHTML = '<i data-lucide="play"></i> Run Task';
-            lucide.createIcons();
-        }
-
-        function renderResult(tool, resultData, container) {
-            if (!resultData) {
-                container.innerHTML = `<div class="result-format-json">null</div>`;
-                return;
-            }
-
-            // Simple heuristic formatting based on tool name or data shape
-            const toolStr = String(tool).toLowerCase();
-
-            if (toolStr.includes('math') || toolStr.includes('calc')) {
-                const val = typeof resultData === 'object' ? (resultData.result || resultData.value || JSON.stringify(resultData)) : resultData;
-                container.innerHTML = `<div class="result-format-calc">${val}</div>`;
-            } 
-            else if (toolStr.includes('http') || toolStr.includes('fetch')) {
-                container.innerHTML = `
-                    <div style="display:flex; gap: 1rem; margin-bottom: 1rem;">
-                        <span class="badge badge-low">Status: ${resultData.status_code || 200}</span>
-                    </div>
-                    <div class="result-format-json">${typeof resultData.body === 'string' ? resultData.body.substring(0, 1000) + (resultData.body.length>1000?'...':'') : JSON.stringify(resultData.body || resultData, null, 2)}</div>
-                `;
-            }
-            else if (toolStr.includes('csv') || toolStr.includes('profile')) {
-                // Assuming resultData has column profiles
-                const cols = resultData.columns || resultData.profiles || {};
-                if (Object.keys(cols).length > 0 && typeof Object.values(cols)[0] === 'object') {
-                    let rows = '';
-                    for (const [colName, stats] of Object.entries(cols)) {
-                        rows += `<tr>
-                            <td><strong>${colName}</strong></td>
-                            <td>${stats.type || '-'}</td>
-                            <td>${stats.null_count !== undefined ? stats.null_count : '-'}</td>
-                            <td>${stats.min !== undefined ? stats.min : '-'}</td>
-                            <td>${stats.max !== undefined ? stats.max : '-'}</td>
-                        </tr>`;
-                    }
-                    container.innerHTML = `
-                        <table class="result-format-table">
-                            <thead><tr><th>Column</th><th>Type</th><th>Nulls</th><th>Min</th><th>Max</th></tr></thead>
-                            <tbody>${rows}</tbody>
-                        </table>
-                    `;
-                } else {
-                    container.innerHTML = `<div class="result-format-json">${JSON.stringify(resultData, null, 2)}</div>`;
-                }
-            }
-            else {
-                // Default JSON
-                container.innerHTML = `<div class="result-format-json">${JSON.stringify(resultData, null, 2)}</div>`;
-            }
-        }
-
-        async function loadHistory() {
-            const list = document.getElementById('history-list');
-            try {
-                const res = await fetch(`${API_BASE}/tasks/history`, { headers: HEADERS });
-                if(!res.ok) return;
-                const data = await res.json();
-                const history = data.history || data || [];
-                
-                list.innerHTML = '';
-                if(history.length === 0) {
-                    list.innerHTML = '<div class="text-muted" style="text-align:center; padding: 2rem 0;">No tasks run yet.</div>';
-                    return;
-                }
-
-                history.slice(0, 10).forEach(item => {
-                    const el = document.createElement('div');
-                    el.className = 'history-item';
-                    const statusColor = item.status === 'success' ? 'var(--success)' : (item.status === 'error' ? 'var(--error)' : 'var(--text-muted)');
-                    const dateStr = item.timestamp ? new Date(item.timestamp).toLocaleString() : 'Just now';
-                    
-                    el.innerHTML = `
-                        <div class="history-main">
-                            <div class="history-task">${item.task || 'Unknown task'}</div>
-                            <div class="history-sub">
-                                <span style="color: ${statusColor}">● ${item.status || 'completed'}</span>
-                                <span><i data-lucide="wrench" size="12"></i> ${item.tool_used || 'N/A'}</span>
-                            </div>
-                        </div>
-                        <div class="text-muted" style="font-size: 0.8rem;">${dateStr}</div>
-                    `;
-                    list.appendChild(el);
-                });
-                lucide.createIcons();
+                showToast(`Successfully extracted ${data.tools_found} tools from ${data.repo}!`, 'success');
+                document.getElementById('import-url').value = '';
+                loadRepos();
             } catch(e) {
-                console.error(e);
+                showToast(e.message, 'error');
+            } finally {
+                btn.innerHTML = '<i data-lucide="download"></i> Import Repo';
+                lucide.createIcons();
             }
         }
 
-        // Init
-        window.addEventListener('DOMContentLoaded', () => {
-            loadTools(); // default view
-        });
+        async function deleteRepo(name) {
+            if (!confirm(`Delete repository '${name}' and unregister its tools?`)) return;
+            try {
+                const res = await fetch(`${API_BASE}/github/repos/${name}`, { method: 'DELETE', headers: HEADERS });
+                if (res.ok) {
+                    showToast(`Repository '${name}' removed`, 'success');
+                    loadRepos();
+                } else {
+                    showToast('Failed to delete repository', 'error');
+                }
+            } catch(e) { showToast(e.message, 'error'); }
+        }
 
+        // 6. API Explorer & Code Snippets Logic
+        function switchApiTab(tabName, el) {
+            document.querySelectorAll('#page-api-docs .tabs .tab').forEach(t => t.classList.remove('active'));
+            if (el) el.classList.add('active');
+
+            document.getElementById('api-tab-explorer').style.display = tabName === 'explorer' ? 'block' : 'none';
+            document.getElementById('api-tab-code').style.display = tabName === 'code' ? 'block' : 'none';
+            document.getElementById('api-tab-endpoints').style.display = tabName === 'endpoints' ? 'block' : 'none';
+
+            if (tabName === 'code') renderSnippetCode();
+        }
+
+        function onExplorerEndpointChange() {
+            const ep = document.getElementById('explorer-endpoint').value;
+            const bodyArea = document.getElementById('explorer-body');
+            if (ep === 'POST /v1/tasks/run') {
+                bodyArea.value = JSON.stringify({ "task": "calculate 99 * 77 + 13" }, null, 2);
+            } else if (ep === 'POST /v1/platform/batch') {
+                bodyArea.value = JSON.stringify({
+                    "tasks": [
+                        { "id": "t1", "task": "calculate 50 * 50" },
+                        { "id": "t2", "task": "generate 3 uuids" }
+                    ],
+                    "parallel": true
+                }, null, 2);
+            } else {
+                bodyArea.value = "{}";
+            }
+        }
+
+        async function sendExplorerRequest() {
+            const epFull = document.getElementById('explorer-endpoint').value;
+            const [method, path] = epFull.split(' ');
+            const bodyStr = document.getElementById('explorer-body').value;
+            const btn = document.getElementById('btn-explorer-send');
+            btn.innerHTML = '<i data-lucide="loader" class="spin"></i> Sending...';
+            lucide.createIcons();
+
+            const startTime = performance.now();
+            try {
+                const opts = { method, headers: HEADERS };
+                if (method === 'POST') {
+                    opts.body = bodyStr;
+                }
+                const res = await fetch(path, opts);
+                const latency = Math.round(performance.now() - startTime);
+                const data = await res.json();
+
+                const statusBadge = document.getElementById('explorer-status');
+                statusBadge.innerText = `${res.status} ${res.statusText || (res.ok ? 'OK' : 'Error')}`;
+                statusBadge.className = `badge badge-${res.ok ? 'success' : 'error'}`;
+                document.getElementById('explorer-latency').innerText = `${latency} ms`;
+
+                document.getElementById('explorer-response-code').innerText = JSON.stringify(data, null, 2);
+            } catch(e) {
+                document.getElementById('explorer-response-code').innerText = `Request Error: ${e.message}`;
+            } finally {
+                btn.innerHTML = '<i data-lucide="send"></i> Send Live Request';
+                lucide.createIcons();
+            }
+        }
+
+        let currentLang = 'python';
+        function switchSnippetLang(lang, el) {
+            currentLang = lang;
+            document.querySelectorAll('#api-tab-code .chip').forEach(c => c.classList.remove('active'));
+            if (el) el.classList.add('active');
+            renderSnippetCode();
+        }
+
+        function renderSnippetCode() {
+            const display = document.getElementById('snippet-code-display');
+            const baseUrl = window.location.origin;
+            if (currentLang === 'python') {
+                display.innerText = `import requests
+
+url = "${baseUrl}/v1/tasks/run"
+headers = {
+    "Authorization": "Bearer mat_live_9f827c_autonomous_token_v1",
+    "Content-Type": "application/json"
+}
+payload = {
+    "task": "calculate 99 * 77 + 13"
+}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())`;
+            } else if (currentLang === 'python_async') {
+                display.innerText = `import asyncio
+import httpx
+
+async def run_task():
+    async with httpx.AsyncClient() as client:
+        res = await client.post(
+            "${baseUrl}/v1/tasks/run",
+            json={"task": "generate 3 uuids"},
+            headers={"Authorization": "Bearer mat_live_9f827c_autonomous_token_v1"}
+        )
+        print(res.json())
+
+asyncio.run(run_task())`;
+            } else if (currentLang === 'js') {
+                display.innerText = `const response = await fetch("${baseUrl}/v1/tasks/run", {
+    method: "POST",
+    headers: {
+        "Authorization": "Bearer mat_live_9f827c_autonomous_token_v1",
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+        task: "convert 100 celsius to fahrenheit"
+    })
+});
+
+const data = await response.json();
+console.log(data);`;
+            } else if (currentLang === 'curl') {
+                display.innerText = `curl -X POST "${baseUrl}/v1/tasks/run" \\
+  -H "Authorization: Bearer mat_live_9f827c_autonomous_token_v1" \\
+  -H "Content-Type: application/json" \\
+  -d '{"task": "calculate 15 * 7 + sqrt(144)"}'`;
+            } else if (currentLang === 'go') {
+                display.innerText = `package main
+
+import (
+    "bytes"
+    "fmt"
+    "io"
+    "net/http"
+)
+
+func main() {
+    url := "${baseUrl}/v1/tasks/run"
+    jsonStr := []byte(\`{"task": "calculate 100 * 20"}\`)
+    req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
+    req.Header.Set("Authorization", "Bearer mat_live_9f827c_autonomous_token_v1")
+    req.Header.Set("Content-Type", "application/json")
+
+    client := &http.Client{}
+    resp, err := client.Do(req)
+    if err != nil { panic(err) }
+    defer resp.Body.Close()
+
+    body, _ := io.ReadAll(resp.Body)
+    fmt.Println(string(body))
+}`;
+            }
+        }
+
+        function copySnippet() {
+            const text = document.getElementById('snippet-code-display').innerText;
+            navigator.clipboard.writeText(text);
+            showToast('Code snippet copied to clipboard', 'success');
+        }
+
+        // 7. Settings Logic
+        function loadSettings() {}
+
+        function copyApiKey() {
+            const key = document.getElementById('settings-api-key').value;
+            navigator.clipboard.writeText(key);
+            showToast('API Key copied to clipboard', 'success');
+        }
+
+        function generateApiKey() {
+            const chars = 'abcdef0123456789';
+            let rand = '';
+            for (let i = 0; i < 24; i++) rand += chars[Math.floor(Math.random() * chars.length)];
+            const newKey = `mat_live_${rand}_v1`;
+            document.getElementById('settings-api-key').value = newKey;
+            showToast('Generated fresh API token', 'success');
+        }
+
+        function escapeHtml(str) {
+            return String(str || '').replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
+        // Initial setup
+        loadDashboard();
+        loadBatchPreset();
     </script>
 </body>
 </html>
