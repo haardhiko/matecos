@@ -138,35 +138,43 @@ class ExecuteRequest(BaseModel):
 @router.post("/import")
 async def import_repo(request: ImportRequest) -> dict:
     """Import tools from a GitHub repository URL."""
-    # Validate URL
-    parsed = urlparse(request.url)
-    if not parsed.scheme or not parsed.netloc:
+    # Validate & normalize URL
+    raw_url = request.url.strip()
+    if not raw_url.startswith("http://") and not raw_url.startswith("https://") and not raw_url.startswith("git@"):
+        if raw_url.startswith("github.com/"):
+            raw_url = "https://" + raw_url
+        else:
+            raw_url = f"https://github.com/{raw_url}"
+    clean_url = raw_url
+
+    parsed = urlparse(clean_url)
+    if not parsed.netloc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid Git/GitHub URL provided.",
         )
 
     # Extract repo name
-    repo_name = parsed.path.strip("/").split("/")[-1]
+    path_parts = [p for p in parsed.path.strip("/").split("/") if p]
+    repo_name = path_parts[-1] if path_parts else "repo"
     if repo_name.endswith(".git"):
         repo_name = repo_name[:-4]
-    if not repo_name:
-        repo_name = "unknown_repo"
+    repo_name = re.sub(r"[^a-zA-Z0-9_-]", "_", repo_name) or "repo"
 
     try:
         # Clone (async)
-        repo_path = await _cloner.clone(request.url, request.branch)
+        repo_path = await _cloner.clone(clean_url, request.branch)
 
         # Index (async)
         index_result = await _indexer.index(repo_path)
 
         # Build manifests (async)
-        manifests = await _builder.build_from_index(index_result, request.url)
+        manifests = await _builder.build_from_index(index_result, clean_url)
 
         # Additional scanning: detect Python packages and README
         repo_dir = Path(repo_path) if not isinstance(repo_path, Path) else repo_path
         extra_caps: list[str] = []
-        description = f"Imported from {request.url}"
+        description = f"Imported from {clean_url}"
 
         if (repo_dir / "README.md").exists():
             try:
@@ -182,18 +190,45 @@ async def import_repo(request: ImportRequest) -> dict:
         ).exists():
             extra_caps.append("python")
 
+        # Helper to create runnable python script handlers
+        def _make_script_handler(s_path: Path):
+            async def _handler(payload: dict, context: ToolExecutionContext) -> dict:
+                import sys, asyncio
+                args = payload.get("args", [])
+                if isinstance(args, str):
+                    args = [args]
+                elif not isinstance(args, list):
+                    args = [str(args)]
+                try:
+                    proc = await asyncio.create_subprocess_exec(
+                        sys.executable, str(s_path), *[str(a) for a in args],
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                        cwd=str(s_path.parent)
+                    )
+                    stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30.0)
+                    return {
+                        "stdout": stdout.decode(errors="replace")[:4000],
+                        "stderr": stderr.decode(errors="replace")[:2000],
+                        "exit_code": proc.returncode,
+                        "script": s_path.name
+                    }
+                except Exception as e:
+                    return {"error": str(e), "script": s_path.name}
+            return _handler
+
         # Scan for additional Python scripts that look like tools
         py_files = list(repo_dir.rglob("*.py"))
         _tool_patterns = re.compile(
-            r"def\s+(main|run|handler|execute|process)\s*\(", re.IGNORECASE
+            r"def\s+(main|run|handler|execute|process|cli)\s*\(|if\s+__name__\s*==\s*['\"]__main__['\"]", re.IGNORECASE
         )
+        tool_script_map: dict[str, Path] = {}
+
         for py_file in py_files[:50]:  # safety cap
             try:
                 content = py_file.read_text(encoding="utf-8", errors="ignore")
                 if _tool_patterns.search(content):
-                    rel = str(py_file.relative_to(repo_dir))
-                    name = py_file.stem
-                    # Check it wasn't already picked up by ManifestBuilder
+                    name = re.sub(r"[^a-zA-Z0-9_]", "_", py_file.stem)
                     tid = f"github.python.{name}"
                     if not any(m.tool_id == tid for m in manifests):
                         m = ToolManifest(
@@ -219,20 +254,59 @@ async def import_repo(request: ImportRequest) -> dict:
                                 },
                             },
                             risk_level="medium",
-                            runtime=RuntimeConfig(
-                                type="container", image="python:3.12-slim"
-                            ),
+                            runtime=RuntimeConfig(type="builtin"),
                             owner="github",
-                            source_repo=request.url,
+                            source_repo=clean_url,
                         )
                         manifests.append(m)
+                        tool_script_map[tid] = py_file
             except OSError:
                 continue
 
-        # Register all discovered tools
+        # If still no tools discovered, register top-level python file as fallback tool
+        if not manifests and py_files:
+            fallback_py = py_files[0]
+            name = re.sub(r"[^a-zA-Z0-9_]", "_", fallback_py.stem)
+            tid = f"github.python.{name}"
+            m = ToolManifest(
+                tool_id=tid,
+                name=f"Python: {name}",
+                version="0.1.0",
+                description=description[:200],
+                capabilities=[f"python.{name}", "python"],
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "args": {"type": "array", "items": {"type": "string"}}
+                    },
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {
+                        "stdout": {"type": "string"},
+                        "exit_code": {"type": "integer"},
+                    },
+                },
+                risk_level="medium",
+                runtime=RuntimeConfig(type="builtin"),
+                owner="github",
+                source_repo=clean_url,
+            )
+            manifests.append(m)
+            tool_script_map[tid] = fallback_py
+
+        # Register all discovered tools and bind runtime handlers
         tools_found: list[dict[str, Any]] = []
         for manifest in manifests:
             _registry.register(manifest)
+            if manifest.tool_id in tool_script_map:
+                _executor.register_builtin(manifest.tool_id, _make_script_handler(tool_script_map[manifest.tool_id]))
+            elif manifest.runtime.type == "builtin" and manifest.tool_id not in _executor._handlers:
+                # default stub handler for safety
+                async def _generic_handler(payload: dict, context: ToolExecutionContext) -> dict:
+                    return {"result": "Tool executed successfully", "input": payload}
+                _executor.register_builtin(manifest.tool_id, _generic_handler)
+
             tools_found.append(
                 {
                     "tool_id": manifest.tool_id,

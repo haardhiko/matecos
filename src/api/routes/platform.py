@@ -317,3 +317,61 @@ async def platform_health(req: Request) -> dict:
         "python_version": sys.version.split()[0],
         "platform": platform.platform()
     }
+
+
+class LLMUpdatePayload(BaseModel):
+    provider: str
+    api_key: str
+    model: str = "gemini-1.5-flash"
+    base_url: str = ""
+    enabled: bool = True
+    temperature: float = 0.3
+
+
+@router.get("/llm")
+async def get_llm_status() -> dict:
+    """Get current LLM configuration and connectivity status."""
+    from src.services.llm_service import llm_service, LLMConfigModel
+    cfg = llm_service.config
+    masked_key = ""
+    if cfg.api_key:
+        masked_key = cfg.api_key[:4] + "..." + cfg.api_key[-4:] if len(cfg.api_key) > 8 else "***"
+    return {
+        "provider": cfg.provider,
+        "model": cfg.model,
+        "base_url": cfg.base_url,
+        "enabled": cfg.enabled,
+        "has_api_key": bool(cfg.api_key),
+        "masked_key": masked_key,
+        "temperature": cfg.temperature,
+    }
+
+
+@router.post("/llm")
+async def update_llm_config(payload: LLMUpdatePayload) -> dict:
+    """Update and save LLM configuration."""
+    from src.services.llm_service import llm_service, LLMConfigModel
+    new_cfg = LLMConfigModel(
+        provider=payload.provider.lower(),
+        api_key=payload.api_key.strip(),
+        model=payload.model.strip(),
+        base_url=payload.base_url.strip(),
+        enabled=payload.enabled,
+        temperature=payload.temperature,
+    )
+    llm_service.save_config(new_cfg)
+    return {"status": "saved", "provider": new_cfg.provider, "model": new_cfg.model, "enabled": new_cfg.enabled}
+
+
+@router.post("/llm/test")
+async def test_llm_connection() -> dict:
+    """Send a small test prompt to verify LLM connection."""
+    from src.services.llm_service import llm_service
+    if not llm_service.config.enabled or not llm_service.config.api_key:
+        raise HTTPException(status_code=400, detail="LLM is not enabled or missing API key.")
+    try:
+        reply = await llm_service.call_llm("Respond with exactly the word: 'Connected'")
+        return {"status": "success", "response": reply.strip()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LLM connection test failed: {str(e)}")
+
