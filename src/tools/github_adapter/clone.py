@@ -63,32 +63,44 @@ class RepositoryCloner:
         dest = self._root / repo_name
 
         if dest.exists():
-            self._log.info("clone.already_exists", repo=repo_name)
-            return dest
-
-        cmd = ["git", "clone", "--depth", str(depth), "--branch", ref, repo_url, str(dest)]
+            if (dest / ".git").exists():
+                self._log.info("clone.already_exists", repo=repo_name)
+                return dest
+            else:
+                shutil.rmtree(dest, ignore_errors=True)
 
         self._log.info("clone.starting", repo_url=repo_url, ref=ref)
 
-        try:
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, stderr = await process.communicate()
+        # First attempt: if ref is specified and not empty, try with --branch
+        # If that fails (e.g. branch main doesn't exist, but master does), retry without --branch
+        attempts = []
+        if ref and ref.lower() not in ["head", "default", ""]:
+            attempts.append(["git", "clone", "--depth", str(depth), "--branch", ref, repo_url, str(dest)])
+        attempts.append(["git", "clone", "--depth", str(depth), repo_url, str(dest)])
 
-            if process.returncode != 0:
-                raise CloneError(
-                    f"git clone failed (exit {process.returncode}): {stderr.decode()[:500]}"
+        last_error = ""
+        for cmd in attempts:
+            if dest.exists():
+                shutil.rmtree(dest, ignore_errors=True)
+            try:
+                process = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
                 )
+                stdout, stderr = await process.communicate()
 
-            self._cloned[repo_url] = dest
-            self._log.info("clone.complete", repo=repo_name, path=str(dest))
-            return dest
+                if process.returncode == 0:
+                    self._cloned[repo_url] = dest
+                    self._log.info("clone.complete", repo=repo_name, path=str(dest))
+                    return dest
+                else:
+                    last_error = stderr.decode(errors="replace")[:500]
+                    self._log.warning("clone.attempt_failed", cmd=cmd, error=last_error)
+            except FileNotFoundError:
+                raise CloneError("git is not installed or not on PATH.") from None
 
-        except FileNotFoundError:
-            raise CloneError("git is not installed or not on PATH.") from None
+        raise CloneError(f"git clone failed: {last_error}")
 
     def get_path(self, repo_url: str) -> Path | None:
         """Get the local path for a previously cloned repository."""

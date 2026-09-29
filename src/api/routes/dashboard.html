@@ -722,20 +722,33 @@
 
             <div id="task-result-container" style="display: none;">
                 <div class="card" style="border-left: 4px solid var(--primary); margin-bottom: 24px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <span id="task-tool-badge" class="badge badge-info" style="font-size: 13px;">--</span>
                             <span id="task-status-badge" class="badge badge-success">SUCCEEDED</span>
                         </div>
                         <div style="display: flex; gap: 8px;">
                             <span id="task-duration-badge" class="badge badge-outline">-- ms</span>
-                            <button class="btn btn-secondary btn-sm" onclick="copyResult()"><i data-lucide="copy"></i> Copy</button>
+                            <button class="btn btn-secondary btn-sm" onclick="copyExplanation()"><i data-lucide="copy"></i> Copy Answer</button>
                         </div>
                     </div>
+
+                    <!-- Plain English Human Explanation -->
+                    <div style="background: var(--surface-hover); border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; margin-bottom: 16px;">
+                        <div class="input-label" style="display: flex; align-items: center; gap: 6px; color: var(--primary);">
+                            <i data-lucide="sparkles" style="width: 14px;"></i> Answer
+                        </div>
+                        <div id="task-human-explanation" style="font-size: 15px; line-height: 1.7; color: var(--text-main); white-space: pre-wrap; margin-top: 6px;"></div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <p id="task-reasoning" style="font-size: 12px; color: var(--text-muted); margin: 0;"></p>
+                        <button class="btn btn-secondary btn-sm" onclick="toggleTechDetails()" id="btn-toggle-tech">
+                            <i data-lucide="code"></i> Show Technical JSON
+                        </button>
+                    </div>
                     
-                    <p id="task-reasoning" style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;"></p>
-                    
-                    <div class="code-block">
+                    <div class="code-block" id="task-tech-details" style="display: none; margin-top: 14px;">
                         <pre><code id="task-output-text"></code></pre>
                     </div>
                 </div>
@@ -996,6 +1009,58 @@
             <p style="margin-bottom: 24px;">Configure authentication tokens, network preferences, and platform environment.</p>
             
             <div style="max-width: 680px; display: flex; flex-direction: column; gap: 20px;">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3>LLM Intelligence Engine</h3>
+                        <span id="llm-status-badge" class="badge badge-outline">Checking...</span>
+                    </div>
+                    <p style="margin-bottom: 16px;">Connect any LLM provider (Google Gemini, OpenAI, Claude, Groq, Ollama) to enable natural language task planning and plain-English answer explanations.</p>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                        <div class="input-group" style="margin: 0;">
+                            <label class="input-label">Provider</label>
+                            <select id="llm-provider" class="select" onchange="onLlmProviderChange()">
+                                <option value="gemini">Google Gemini (Recommended)</option>
+                                <option value="openai">OpenAI (ChatGPT)</option>
+                                <option value="anthropic">Anthropic Claude</option>
+                                <option value="groq">Groq (Ultra-Fast)</option>
+                                <option value="ollama">Ollama / Local LLM</option>
+                                <option value="openrouter">OpenRouter</option>
+                                <option value="custom">Custom OpenAI-Compatible API</option>
+                            </select>
+                        </div>
+                        <div class="input-group" style="margin: 0;">
+                            <label class="input-label">Model Identifier</label>
+                            <input type="text" id="llm-model" class="input" value="gemini-1.5-flash" placeholder="e.g. gemini-1.5-flash">
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">API Key / Token</label>
+                        <input type="password" id="llm-key" class="input" placeholder="Enter API Key (starts with AIza... or sk-...)">
+                    </div>
+
+                    <div class="input-group" id="llm-base-url-group" style="display: none;">
+                        <label class="input-label">Custom Base URL</label>
+                        <input type="text" id="llm-base-url" class="input" placeholder="e.g. http://localhost:11434/v1">
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 18px;">
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                            <input type="checkbox" id="llm-enabled" checked>
+                            <strong>Enable LLM Intelligence</strong>
+                        </label>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-secondary btn-sm" onclick="testLLMConnection()" id="btn-test-llm">
+                                <i data-lucide="zap"></i> Test Connection
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="saveLLMConfig()" id="btn-save-llm">
+                                <i data-lucide="save"></i> Save Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card">
                     <h3>API Authentication Key</h3>
                     <p style="margin-bottom: 16px;">Use this token in the <code>Authorization: Bearer &lt;KEY&gt;</code> header of your HTTP requests.</p>
@@ -1387,6 +1452,10 @@
                 document.getElementById('task-duration-badge').innerText = `${data.duration_ms ?? 0} ms`;
                 document.getElementById('task-reasoning').innerText = data.reasoning || '';
 
+                // Human-understandable explanation
+                const explanation = data.explanation || (typeof data.result === 'object' ? JSON.stringify(data.result) : (data.result || data.error || 'No output produced'));
+                document.getElementById('task-human-explanation').innerHTML = formatExplanationMarkdown(explanation);
+
                 let out = data.result !== null && data.result !== undefined ? data.result : data.error;
                 if (typeof out === 'object') out = JSON.stringify(out, null, 2);
                 document.getElementById('task-output-text').innerText = out || 'No output produced';
@@ -1399,6 +1468,34 @@
                 btn.innerHTML = '<i data-lucide="play"></i> Run Task';
                 lucide.createIcons();
             }
+        }
+
+        function formatExplanationMarkdown(text) {
+            if (!text) return '';
+            let escaped = escapeHtml(text);
+            escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong style="color: var(--text-main); font-weight: 600;">$1</strong>');
+            escaped = escaped.replace(/`([^`]+)`/g, '<code style="background: var(--bg-color); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; font-size: 13px; color: var(--info);">$1</code>');
+            escaped = escaped.replace(/^• (.*)$/gm, '<div style="margin-left: 12px; margin-bottom: 4px;">• $1</div>');
+            return escaped;
+        }
+
+        function toggleTechDetails() {
+            const details = document.getElementById('task-tech-details');
+            const btn = document.getElementById('btn-toggle-tech');
+            if (details.style.display === 'none') {
+                details.style.display = 'block';
+                btn.innerHTML = '<i data-lucide="eye-off"></i> Hide Technical JSON';
+            } else {
+                details.style.display = 'none';
+                btn.innerHTML = '<i data-lucide="code"></i> Show Technical JSON';
+            }
+            lucide.createIcons();
+        }
+
+        function copyExplanation() {
+            const el = document.getElementById('task-human-explanation');
+            navigator.clipboard.writeText(el.innerText || el.textContent);
+            showToast('Answer copied to clipboard', 'success');
         }
 
         async function loadTaskHistory() {
@@ -1750,7 +1847,134 @@ func main() {
         }
 
         // 7. Settings Logic
-        function loadSettings() {}
+        async function loadSettings() {
+            try {
+                const res = await fetch(`${API_BASE}/platform/llm`, { headers: HEADERS });
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('llm-provider').value = data.provider || 'gemini';
+                    document.getElementById('llm-model').value = data.model || 'gemini-1.5-flash';
+                    document.getElementById('llm-base-url').value = data.base_url || '';
+                    document.getElementById('llm-enabled').checked = Boolean(data.enabled);
+                    
+                    if (data.has_api_key) {
+                        document.getElementById('llm-key').placeholder = `Configured (${data.masked_key})`;
+                    }
+
+                    const badge = document.getElementById('llm-status-badge');
+                    if (data.enabled && data.has_api_key) {
+                        badge.className = 'badge badge-success';
+                        badge.innerText = `Active (${data.provider})`;
+                    } else if (data.enabled) {
+                        badge.className = 'badge badge-warning';
+                        badge.innerText = 'Key Required';
+                    } else {
+                        badge.className = 'badge badge-outline';
+                        badge.innerText = 'Disabled';
+                    }
+
+                    onLlmProviderChange();
+                }
+            } catch(e) {
+                console.error("Error loading LLM settings:", e);
+            }
+        }
+
+        function onLlmProviderChange() {
+            const provider = document.getElementById('llm-provider').value;
+            const modelInput = document.getElementById('llm-model');
+            const baseGroup = document.getElementById('llm-base-url-group');
+
+            const defaultModels = {
+                'gemini': 'gemini-1.5-flash',
+                'openai': 'gpt-4o-mini',
+                'anthropic': 'claude-3-5-haiku-20241022',
+                'groq': 'llama-3.1-8b-instant',
+                'ollama': 'llama3',
+                'openrouter': 'meta-llama/llama-3.1-8b-instruct:free',
+                'custom': 'default-model'
+            };
+
+            if (!modelInput.value || Object.values(defaultModels).includes(modelInput.value)) {
+                modelInput.value = defaultModels[provider] || 'default-model';
+            }
+
+            if (provider === 'ollama' || provider === 'custom') {
+                baseGroup.style.display = 'block';
+                if (!document.getElementById('llm-base-url').value && provider === 'ollama') {
+                    document.getElementById('llm-base-url').value = 'http://localhost:11434/v1';
+                }
+            } else {
+                baseGroup.style.display = 'none';
+            }
+        }
+
+        async function saveLLMConfig() {
+            const provider = document.getElementById('llm-provider').value;
+            const model = document.getElementById('llm-model').value.trim();
+            const apiKey = document.getElementById('llm-key').value.trim();
+            const baseUrl = document.getElementById('llm-base-url').value.trim();
+            const enabled = document.getElementById('llm-enabled').checked;
+
+            const btn = document.getElementById('btn-save-llm');
+            btn.innerHTML = '<i data-lucide="loader" class="spin"></i> Saving...';
+            lucide.createIcons();
+
+            try {
+                const res = await fetch(`${API_BASE}/platform/llm`, {
+                    method: 'POST',
+                    headers: HEADERS,
+                    body: JSON.stringify({
+                        provider,
+                        model,
+                        api_key: apiKey,
+                        base_url: baseUrl,
+                        enabled
+                    })
+                });
+                if (!res.ok) throw new Error('Failed to save LLM settings');
+                showToast('LLM Configuration saved successfully', 'success');
+                loadSettings();
+            } catch(e) {
+                showToast(e.message, 'error');
+            } finally {
+                btn.innerHTML = '<i data-lucide="save"></i> Save Settings';
+                lucide.createIcons();
+            }
+        }
+
+        async function testLLMConnection() {
+            const btn = document.getElementById('btn-test-llm');
+            btn.innerHTML = '<i data-lucide="loader" class="spin"></i> Testing...';
+            lucide.createIcons();
+
+            try {
+                // If user typed in an unsaved key, save it first
+                const apiKey = document.getElementById('llm-key').value.trim();
+                if (apiKey) {
+                    await saveLLMConfig();
+                }
+
+                const res = await fetch(`${API_BASE}/platform/llm/test`, {
+                    method: 'POST',
+                    headers: HEADERS
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(`Connection successful! Model replied: "${data.response}"`, 'success');
+                    const badge = document.getElementById('llm-status-badge');
+                    badge.className = 'badge badge-success';
+                    badge.innerText = 'Connected';
+                } else {
+                    showToast(data.detail || 'Connection failed', 'error');
+                }
+            } catch(e) {
+                showToast(e.message, 'error');
+            } finally {
+                btn.innerHTML = '<i data-lucide="zap"></i> Test Connection';
+                lucide.createIcons();
+            }
+        }
 
         function copyApiKey() {
             const key = document.getElementById('settings-api-key').value;

@@ -373,13 +373,23 @@ async def run_task(request: RunTaskRequest) -> dict:
         exec_result = {
             "task": request.task,
             "tool_selected": best.tool_id,
-            "tool_name": best.manifest.name,
-            "reasoning": reasoning,
             "result": None,
             "error": str(exc),
             "duration_ms": int((time.time() - start_time) * 1000),
             "status": "FAILED",
         }
+
+    # Generate human-understandable explanation via LLM / smart synthesizer
+    from src.services.llm_service import llm_service
+
+    explanation = await llm_service.explain_result(
+        task=request.task,
+        tool_id=best.tool_id,
+        tool_name=best.manifest.name,
+        result=exec_result.get("result"),
+        error=exec_result.get("error"),
+    )
+    exec_result["explanation"] = explanation
 
     # Record history
     exec_result["timestamp"] = datetime.now(UTC).isoformat()
@@ -457,13 +467,21 @@ async def run_task_with_tool(tool_id: str, request: RunTaskRequest) -> dict:
         exec_result = {
             "task": request.task,
             "tool_selected": tool_id,
-            "tool_name": tool_record.manifest.name,
-            "reasoning": f"Manually selected tool {tool_id}",
             "result": None,
             "error": str(exc),
             "duration_ms": int((time.time() - start_time) * 1000),
             "status": "FAILED",
         }
+
+    from src.services.llm_service import llm_service
+    explanation = await llm_service.explain_result(
+        task=request.task,
+        tool_id=tool_id,
+        tool_name=tool_record.manifest.name,
+        result=exec_result.get("result"),
+        error=exec_result.get("error"),
+    )
+    exec_result["explanation"] = explanation
 
     exec_result["timestamp"] = datetime.now(UTC).isoformat()
     _task_history.append(exec_result)
