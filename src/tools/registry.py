@@ -11,6 +11,7 @@ discovery, validation, health tracking, and executor dispatch.
 from __future__ import annotations
 
 import fnmatch
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
@@ -123,7 +124,24 @@ class ToolRegistry:
 
     def __init__(self) -> None:
         self._tools: dict[str, ToolRecord] = {}
+        self._change_listeners: set[Callable[[str, ToolRecord | None], None]] = set()
         self._log = logger.bind(component="ToolRegistry")
+
+    def subscribe(self, listener: Callable[[str, ToolRecord | None], None]) -> Callable[[], None]:
+        """Subscribe to registrations/removals; return a function that unsubscribes."""
+        self._change_listeners.add(listener)
+
+        def unsubscribe() -> None:
+            self._change_listeners.discard(listener)
+
+        return unsubscribe
+
+    def _notify_changed(self, tool_id: str, record: ToolRecord | None) -> None:
+        for listener in tuple(self._change_listeners):
+            try:
+                listener(tool_id, record)
+            except Exception:
+                self._log.exception("tool.change_listener_failed", tool_id=tool_id)
 
     # ------------------------------------------------------------------
     # Registration
@@ -144,6 +162,7 @@ class ToolRegistry:
         record = ToolRecord(tool_id=manifest.tool_id, manifest=manifest)
         self._tools[manifest.tool_id] = record
         self._log.info("tool.registered", tool_id=manifest.tool_id, version=manifest.version)
+        self._notify_changed(manifest.tool_id, record)
         return record
 
     def unregister(self, tool_id: str) -> bool:
@@ -158,6 +177,7 @@ class ToolRegistry:
         if tool_id in self._tools:
             del self._tools[tool_id]
             self._log.info("tool.unregistered", tool_id=tool_id)
+            self._notify_changed(tool_id, None)
             return True
         return False
 

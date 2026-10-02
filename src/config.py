@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -123,6 +123,26 @@ class AppSettings(BaseSettings):
     github_token: str = ""
     github_clone_base_dir: str = "/tmp/matecos/repos"
     github_max_repo_size_mb: int = 500
+
+    # MCP server — the HTTP endpoint is mounted in the main ASGI app.
+    mcp_enabled: bool = True
+    mcp_transport: Literal["streamable-http", "stdio"] = "streamable-http"
+    mcp_server_name: str = "MATECOS"
+    mcp_path: str = "/mcp"
+    mcp_host: str = "127.0.0.1"
+    mcp_port: int = 8765
+    mcp_import_repositories: str = ""
+
+    # Imported repository tools execute untrusted code unless explicitly allowed.
+    allow_untrusted_tools: bool = False
+
+    @field_validator("mcp_path")
+    @classmethod
+    def _normalize_mcp_path(cls, value: str) -> str:
+        path = value.strip()
+        if not path or path == "/":
+            return "/"
+        return f"/{path.strip('/')}"
 
 
 @lru_cache(maxsize=1)

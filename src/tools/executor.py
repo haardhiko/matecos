@@ -139,6 +139,24 @@ class ToolExecutor:
         )
         log.info("executor.dispatch_start")
 
+        if manifest.source_repo and not getattr(self._settings, "allow_untrusted_tools", False):
+            duration_ms = 0
+            error = (
+                "This tool comes from an external repository and is blocked until it is reviewed. "
+                "Set ALLOW_UNTRUSTED_TOOLS=true only for repositories you trust."
+            )
+            log.warning("executor.untrusted_tool_blocked", source_repo=manifest.source_repo)
+            return ToolExecutionResult(
+                invocation_id=invocation_id,
+                tool_id=manifest.tool_id,
+                status="BLOCKED",
+                error=error,
+                duration_ms=duration_ms,
+                cost_usd=0.0,
+                tokens_used=0,
+                resource_usage={},
+            )
+
         # Determine effective timeout
         timeout_sec = float(
             context.timeout_override

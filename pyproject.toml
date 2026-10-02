@@ -55,6 +55,7 @@ dependencies = [
     "aiofiles>=24.1",
     # Semver
     "semver>=3.0",
+    "mcp>=2.2,<3",
 ]
 
 [project.optional-dependencies]

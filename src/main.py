@@ -7,7 +7,7 @@ FastAPI application entry point with lifespan management, middleware, and router
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 from typing import Any
 
 import structlog
@@ -36,6 +36,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     3. Close the database engine.
     """
     settings = get_settings()
+    mcp_stack = AsyncExitStack()
 
     import time
     app.state.startup_time = time.time()
@@ -86,10 +87,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     logger.info("app.startup.complete")
 
+    mcp_server = getattr(app.state, "mcp_server", None)
+    if mcp_server is not None:
+        await mcp_stack.enter_async_context(mcp_server.session_manager.run())
+        logger.info("mcp.http_transport.started", path=settings.mcp_path)
+
     yield
 
     # --- Shutdown ---
     logger.info("app.shutdown")
+
+    await mcp_stack.aclose()
+    adapter = getattr(app.state, "mcp_adapter", None)
+    if adapter is not None:
+        adapter.close()
 
     if lock_manager:
         await lock_manager.close()
@@ -225,6 +236,22 @@ def create_app() -> FastAPI:
         app.include_router(ui_router)
     except (ImportError, Exception):
         pass
+
+    # Keep the MCP protocol as a separate adapter/transport over the existing
+    # importer-owned registry and executor. Mount last so API routes keep priority.
+    if settings.mcp_enabled and settings.mcp_transport == "streamable-http":
+        from src.tools.mcp_adapter import get_mcp_adapter
+
+        adapter = get_mcp_adapter()
+        mcp_app = adapter.server.streamable_http_app(
+            streamable_http_path=settings.mcp_path,
+            host=settings.mcp_host,
+            stateless_http=False,
+        )
+        app.state.mcp_adapter = adapter
+        app.state.mcp_server = adapter.server
+        app.mount("/", mcp_app, name="mcp")
+        logger.info("mcp.http_transport.configured", path=settings.mcp_path, host=settings.mcp_host)
 
     return app
 
