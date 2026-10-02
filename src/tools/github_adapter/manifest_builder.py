@@ -9,6 +9,7 @@ discovered tool-like patterns (APIs, CLIs, scripts).
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import structlog
@@ -130,7 +131,16 @@ class ManifestBuilder:
 
     def _build_container_manifest(self, dockerfile_path: str, repo_url: str) -> ToolManifest:
         """Build a manifest for a Dockerised tool."""
-        name = Path(dockerfile_path).parent.name or "container"
+        dockerfile = Path(dockerfile_path)
+        parent_name = dockerfile.parent.name
+        file_suffix = dockerfile.stem.removeprefix("Dockerfile").strip("._-")
+        raw_name = "_".join(part for part in (parent_name, file_suffix) if part) or "container"
+        name = re.sub(r"[^a-z0-9_]+", "_", raw_name.lower()).strip("_")
+        if not name:
+            name = "container"
+        if not name[0].isalpha():
+            name = f"tool_{name}"
+        name = name[:64].rstrip("_") or "container"
         tool_id = f"github.container.{name}"
 
         return ToolManifest(
