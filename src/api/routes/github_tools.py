@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from src.tools.executor import ToolExecutor
 from src.tools.github_adapter.clone import RepositoryCloner
 from src.tools.github_adapter.indexer import RepositoryIndexer
-from src.tools.github_adapter.manifest_builder import ManifestBuilder
+from src.tools.github_adapter.manifest_builder import ManifestBuilder, normalize_tool_segment
 from src.tools.manifests import (
     ResourceLimits,
     RuntimeConfig,
@@ -254,7 +254,8 @@ async def import_repo(request: ImportRequest) -> dict:
             try:
                 content = py_file.read_text(encoding="utf-8", errors="ignore")
                 if _tool_patterns.search(content):
-                    name = re.sub(r"[^a-zA-Z0-9_]", "_", py_file.stem)
+                    relative_script = py_file.relative_to(repo_dir).with_suffix("").as_posix()
+                    name = normalize_tool_segment(relative_script.replace("/", "_"), "script")
                     tid = f"github.python.{name}"
                     if not any(m.tool_id == tid for m in manifests):
                         m = ToolManifest(
@@ -292,7 +293,8 @@ async def import_repo(request: ImportRequest) -> dict:
         # If still no tools discovered, register top-level python file as fallback tool
         if not manifests and tool_candidates:
             fallback_py = tool_candidates[0]
-            name = re.sub(r"[^a-zA-Z0-9_]", "_", fallback_py.stem)
+            relative_script = fallback_py.relative_to(repo_dir).with_suffix("").as_posix()
+            name = normalize_tool_segment(relative_script.replace("/", "_"), "script")
             tid = f"github.python.{name}"
             m = ToolManifest(
                 tool_id=tid,

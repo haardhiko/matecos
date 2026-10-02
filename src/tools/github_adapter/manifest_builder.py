@@ -27,6 +27,16 @@ from src.tools.manifests import (
 logger = structlog.get_logger(__name__)
 
 
+def normalize_tool_segment(value: str, fallback: str) -> str:
+    """Return a lowercase identifier segment accepted by ``ToolManifest``."""
+    segment = re.sub(r"_+", "_", re.sub(r"[^a-z0-9_]+", "_", value.lower())).strip("_")
+    if not segment:
+        segment = fallback
+    if not segment[0].isalpha():
+        segment = f"tool_{segment}"
+    return segment[:64].rstrip("_") or fallback
+
+
 class ManifestBuilder:
     """Builds tool manifests from repository analysis results.
 
@@ -83,7 +93,8 @@ class ManifestBuilder:
 
     def _build_python_manifest(self, script_path: str, repo_url: str) -> ToolManifest:
         """Build a manifest for a Python script."""
-        name = Path(script_path).stem
+        script_name = Path(script_path).with_suffix("").as_posix().replace("\\", "/").replace("/", "_")
+        name = normalize_tool_segment(script_name, "script")
         tool_id = f"github.python.{name}"
 
         return ToolManifest(
@@ -135,12 +146,7 @@ class ManifestBuilder:
         parent_name = dockerfile.parent.name
         file_suffix = dockerfile.stem.removeprefix("Dockerfile").strip("._-")
         raw_name = "_".join(part for part in (parent_name, file_suffix) if part) or "container"
-        name = re.sub(r"[^a-z0-9_]+", "_", raw_name.lower()).strip("_")
-        if not name:
-            name = "container"
-        if not name[0].isalpha():
-            name = f"tool_{name}"
-        name = name[:64].rstrip("_") or "container"
+        name = normalize_tool_segment(raw_name, "container")
         tool_id = f"github.container.{name}"
 
         return ToolManifest(
