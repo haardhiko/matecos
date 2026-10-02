@@ -830,14 +830,14 @@
         <!-- 5. Import Tools Page -->
         <section id="page-import-tools" class="page">
             <h1>Import tools from GitHub</h1>
-            <p style="margin-bottom: 24px;">Paste a public repository link, or a link to a branch or file. MATECOS will look for runnable Python scripts and use the repository README to describe them.</p>
+            <p style="margin-bottom: 24px;">Paste a public GitHub repository link, <code>owner/repository</code>, or a <code>git clone</code> / <code>gh repo clone</code> command. MATECOS will find runnable Python scripts in the repository.</p>
             
             <div class="card" style="margin-bottom: 28px;">
                 <h3>Custom Repository Import</h3>
                 <div class="import-form">
                     <div class="input-group" style="flex: 1; margin: 0;">
                         <label class="input-label">Repository, branch, or file link</label>
-                        <input type="text" id="import-url" class="input" placeholder="https://github.com/owner/repository/tree/main">
+                        <input type="text" id="import-url" class="input" placeholder="GitHub URL, owner/repository, or gh repo clone owner/repository">
                     </div>
                     <div class="input-group branch-field" style="width: 140px; margin: 0;">
                         <label class="input-label">Branch</label>

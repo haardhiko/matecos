@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import shlex
 import time
 from pathlib import Path
 from typing import Any
@@ -13,7 +14,7 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
 from src.tools.executor import ToolExecutor
-from src.tools.github_adapter.clone import RepositoryCloner
+from src.tools.github_adapter.clone import CloneError, RepositoryCloner
 from src.tools.github_adapter.indexer import RepositoryIndexer
 from src.tools.github_adapter.manifest_builder import ManifestBuilder, normalize_tool_segment
 from src.tools.manifests import (
@@ -130,6 +131,86 @@ class ExecuteRequest(BaseModel):
     payload: dict
 
 
+def _normalize_repository_reference(reference: str, branch: str = "") -> tuple[str, str]:
+    """Normalize common GitHub URL and CLI clone forms into a repo URL/ref."""
+    value = reference.strip()
+    selected_branch = branch.strip()
+
+    # Accept a CLI command copied from GitHub's Code menu or a terminal.
+    gh_command = re.search(
+        r"\bgh(?:\.exe)?\s+repo\s+clone\s+([^\s'\"<>]+)", value, re.IGNORECASE
+    )
+    if gh_command:
+        value = gh_command.group(1)
+    elif re.search(r"\bgit(?:\.exe)?\s+clone\b", value, re.IGNORECASE):
+        command = re.search(r"\bgit(?:\.exe)?\s+clone\b", value, re.IGNORECASE)
+        assert command is not None
+        try:
+            arguments = shlex.split(value[command.end():].strip())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=f"Could not read the git clone command: {exc}") from exc
+        candidates = [
+            item for item in arguments
+            if item.startswith(("https://", "http://", "git@", "github.com/"))
+            or re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:\.git)?/?", item)
+        ]
+        if candidates:
+            value = candidates[0]
+
+    # If a malformed URL was pasted around a command, recover its owner/repo target.
+    broken_github_command = re.match(
+        r"^https?://github\.com/gh\s+repo\s+clone\s+([^\s'\"<>]+)$", value, re.IGNORECASE
+    )
+    if broken_github_command:
+        value = broken_github_command.group(1)
+
+    # Accept Markdown links and angle-bracketed links copied from documentation.
+    markdown_match = re.search(r"\[[^\]]*\]\((https?://[^)]+)\)", value)
+    if markdown_match:
+        value = markdown_match.group(1).strip()
+    value = value.strip().strip("`\"'<> ").rstrip(".,;!?)]}")
+    if value.lower().startswith("github.com/"):
+        value = f"https://{value}"
+
+    # Convert GitHub's SSH clone form to the equivalent public HTTPS URL.
+    ssh_match = re.fullmatch(r"git@github\.com:([^/]+)/([^/]+?)(?:\.git)?/?", value, re.IGNORECASE)
+    if ssh_match:
+        value = f"https://github.com/{ssh_match.group(1)}/{ssh_match.group(2)}"
+
+    if not value.startswith(("https://", "http://")):
+        if re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:\.git)?/?", value):
+            value = f"https://github.com/{value}"
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Enter a GitHub URL, owner/repository, or a command such as "
+                    "'gh repo clone owner/repository'."
+                ),
+            )
+
+    parsed = urlparse(value)
+    if (parsed.hostname or "").lower() != "github.com":
+        raise HTTPException(status_code=400, detail="Only GitHub.com repository links are supported.")
+
+    path_parts = [part for part in parsed.path.strip("/").split("/") if part]
+    # Recover the command form even if a client has encoded its spaces into URL segments.
+    if len(path_parts) >= 5 and path_parts[:3] == ["gh", "repo", "clone"]:
+        path_parts = path_parts[3:]
+    if len(path_parts) < 2:
+        raise HTTPException(status_code=400, detail="The GitHub link must include an owner and repository name.")
+
+    owner, repo = path_parts[:2]
+    repo = repo.removesuffix(".git")
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+", owner) or not re.fullmatch(r"[A-Za-z0-9_.-]+", repo):
+        raise HTTPException(status_code=400, detail="The owner or repository name in this GitHub link is invalid.")
+
+    if len(path_parts) > 3 and path_parts[2] in {"tree", "blob"}:
+        selected_branch = selected_branch or path_parts[3]
+    clean_url = f"https://github.com/{owner}/{repo}"
+    return clean_url, selected_branch or "main"
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -138,32 +219,8 @@ class ExecuteRequest(BaseModel):
 @router.post("/import")
 async def import_repo(request: ImportRequest) -> dict:
     """Import tools from a GitHub repository URL."""
-    # Accept a repository URL or a GitHub tree/blob link, then clone the repo root.
-    raw_url = request.url.strip()
-    selected_branch = request.branch.strip()
-    if not raw_url.startswith("http://") and not raw_url.startswith("https://") and not raw_url.startswith("git@"):
-        if raw_url.startswith("github.com/"):
-            raw_url = "https://" + raw_url
-        else:
-            raw_url = f"https://github.com/{raw_url}"
-    parsed = urlparse(raw_url)
-    if not parsed.netloc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid Git/GitHub URL provided.",
-        )
-
-    path_parts = [p for p in parsed.path.strip("/").split("/") if p]
-    if parsed.hostname and parsed.hostname.lower() == "github.com":
-        if len(path_parts) < 2:
-            raise HTTPException(status_code=400, detail="Use a GitHub link that includes an owner and repository name.")
-        if len(path_parts) > 2 and path_parts[2] in {"tree", "blob"}:
-            if len(path_parts) < 4:
-                raise HTTPException(status_code=400, detail="The GitHub link is missing its branch or file path.")
-            selected_branch = selected_branch or path_parts[3]
-        raw_url = f"https://github.com/{path_parts[0]}/{path_parts[1]}"
-    clean_url = raw_url
-    selected_branch = selected_branch or "main"
+    # Normalize repository, tree/blob, SSH, and copied clone-command forms.
+    clean_url, selected_branch = _normalize_repository_reference(request.url, request.branch)
 
     # Extract repo name
     path_parts = [p for p in urlparse(clean_url).path.strip("/").split("/") if p]
@@ -407,6 +464,12 @@ async def import_repo(request: ImportRequest) -> dict:
             "total_files": index_result.total_files,
         }
 
+    except CloneError as exc:
+        logger.warning("github.clone_failed", url=clean_url, error=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Could not download {repo_name} from GitHub. {exc}",
+        ) from exc
     except Exception as exc:
         logger.exception("github.import_failed", url=request.url)
         reason = str(exc).strip() or f"{type(exc).__name__}. Check the server log for details."
