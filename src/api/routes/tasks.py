@@ -281,13 +281,38 @@ async def run_task(request: RunTaskRequest) -> dict:
             if task_words & desc_words:
                 candidates.append(tool)
 
-    # Step 5: If still nothing, return available tools
-    if not candidates:
+    # Step 5: Let the configured LLM choose from the complete tool list.
+    # The deterministic matcher remains the fallback when no model is configured.
+    from src.services.llm_service import llm_service
+
+    llm_choice = await llm_service.select_tool(
+        task_text,
+        [
+            {
+                "tool_id": tool.tool_id,
+                "name": tool.manifest.name,
+                "description": tool.manifest.description[:500],
+                "capabilities": tool.manifest.capabilities[:12],
+                "risk_level": tool.manifest.risk_level,
+                "estimated_cost_usd": tool.manifest.limits.cost_estimate_usd,
+            }
+            for tool in all_tools
+            if tool.manifest.limits.cost_estimate_usd <= request.max_cost
+        ],
+    )
+    llm_selected = next(
+        (tool for tool in all_tools if llm_choice and tool.tool_id == llm_choice["tool_id"]),
+        None,
+    )
+
+    # If there is no model choice, use the deterministic candidates.
+    if not candidates and llm_selected is None:
         return {
             "task": request.task,
             "tool_selected": None,
             "tool_name": None,
             "reasoning": "No matching tool found for this task.",
+            "explanation": "I couldn't find a tool that matches this request. Try describing the task differently or choose a tool from the catalog.",
             "result": None,
             "duration_ms": 0,
             "status": "NO_TOOL_FOUND",
@@ -297,7 +322,7 @@ async def run_task(request: RunTaskRequest) -> dict:
             ],
         }
 
-    # Step 6: Rank candidates
+    # Step 6: Use the model's valid selection or rank deterministic candidates.
     def score(c):
         s = 0.0
         c_caps = set(c.manifest.capabilities)
@@ -328,7 +353,7 @@ async def run_task(request: RunTaskRequest) -> dict:
             s += 1
         return s
 
-    best = max(candidates, key=score)
+    best = llm_selected or max(candidates, key=score)
 
     if score(best) < -50:
         return {
@@ -336,6 +361,7 @@ async def run_task(request: RunTaskRequest) -> dict:
             "tool_selected": best.tool_id,
             "tool_name": best.manifest.name,
             "reasoning": "Matching tools exceed your max_cost budget.",
+            "explanation": "The matching tool is over the cost limit set for this request.",
             "result": None,
             "duration_ms": 0,
             "status": "OVER_BUDGET",
@@ -344,9 +370,12 @@ async def run_task(request: RunTaskRequest) -> dict:
     # Step 7: Extract payload and execute
     payload = extract_payload(best.tool_id, request.task)
     reasoning = (
-        f"Selected '{best.manifest.name}' based on capability match: "
-        f"{best.manifest.capabilities}. "
-        f"Detected keywords mapped to: {required_caps[:5]}"
+        f"{best.manifest.name} was selected because {llm_choice['reason']}"
+        if llm_selected and llm_choice
+        else (
+            f"Selected '{best.manifest.name}' based on matching task words and capabilities: "
+            f"{', '.join(best.manifest.capabilities[:5]) or 'general task match'}."
+        )
     )
 
     context = ToolExecutionContext(
@@ -380,8 +409,6 @@ async def run_task(request: RunTaskRequest) -> dict:
         }
 
     # Generate human-understandable explanation via LLM / smart synthesizer
-    from src.services.llm_service import llm_service
-
     explanation = await llm_service.explain_result(
         task=request.task,
         tool_id=best.tool_id,

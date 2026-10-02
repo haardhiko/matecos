@@ -123,7 +123,7 @@ def get_executor() -> ToolExecutor:
 
 class ImportRequest(BaseModel):
     url: str
-    branch: str = "main"
+    branch: str = ""
 
 
 class ExecuteRequest(BaseModel):
@@ -138,24 +138,35 @@ class ExecuteRequest(BaseModel):
 @router.post("/import")
 async def import_repo(request: ImportRequest) -> dict:
     """Import tools from a GitHub repository URL."""
-    # Validate & normalize URL
+    # Accept a repository URL or a GitHub tree/blob link, then clone the repo root.
     raw_url = request.url.strip()
+    selected_branch = request.branch.strip()
     if not raw_url.startswith("http://") and not raw_url.startswith("https://") and not raw_url.startswith("git@"):
         if raw_url.startswith("github.com/"):
             raw_url = "https://" + raw_url
         else:
             raw_url = f"https://github.com/{raw_url}"
-    clean_url = raw_url
-
-    parsed = urlparse(clean_url)
+    parsed = urlparse(raw_url)
     if not parsed.netloc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid Git/GitHub URL provided.",
         )
 
-    # Extract repo name
     path_parts = [p for p in parsed.path.strip("/").split("/") if p]
+    if parsed.hostname and parsed.hostname.lower() == "github.com":
+        if len(path_parts) < 2:
+            raise HTTPException(status_code=400, detail="Use a GitHub link that includes an owner and repository name.")
+        if len(path_parts) > 2 and path_parts[2] in {"tree", "blob"}:
+            if len(path_parts) < 4:
+                raise HTTPException(status_code=400, detail="The GitHub link is missing its branch or file path.")
+            selected_branch = selected_branch or path_parts[3]
+        raw_url = f"https://github.com/{path_parts[0]}/{path_parts[1]}"
+    clean_url = raw_url
+    selected_branch = selected_branch or "main"
+
+    # Extract repo name
+    path_parts = [p for p in urlparse(clean_url).path.strip("/").split("/") if p]
     repo_name = path_parts[-1] if path_parts else "repo"
     if repo_name.endswith(".git"):
         repo_name = repo_name[:-4]
@@ -163,7 +174,7 @@ async def import_repo(request: ImportRequest) -> dict:
 
     try:
         # Clone (async)
-        repo_path = await _cloner.clone(clean_url, request.branch)
+        repo_path = await _cloner.clone(clean_url, selected_branch)
 
         # Index (async)
         index_result = await _indexer.index(repo_path)
@@ -193,38 +204,53 @@ async def import_repo(request: ImportRequest) -> dict:
         # Helper to create runnable python script handlers
         def _make_script_handler(s_path: Path):
             async def _handler(payload: dict, context: ToolExecutionContext) -> dict:
-                import sys, asyncio
+                import asyncio
+                import subprocess
+                import sys
+
                 args = payload.get("args", [])
                 if isinstance(args, str):
                     args = [args]
                 elif not isinstance(args, list):
                     args = [str(args)]
                 try:
-                    proc = await asyncio.create_subprocess_exec(
-                        sys.executable, str(s_path), *[str(a) for a in args],
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE,
-                        cwd=str(s_path.parent)
+                    proc = await asyncio.to_thread(
+                        subprocess.run,
+                        [sys.executable, str(s_path), *[str(a) for a in args]],
+                        capture_output=True,
+                        check=False,
+                        cwd=str(s_path.parent),
+                        timeout=30.0,
                     )
-                    stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30.0)
                     return {
-                        "stdout": stdout.decode(errors="replace")[:4000],
-                        "stderr": stderr.decode(errors="replace")[:2000],
+                        "stdout": proc.stdout.decode(errors="replace")[:4000],
+                        "stderr": proc.stderr.decode(errors="replace")[:2000],
                         "exit_code": proc.returncode,
                         "script": s_path.name
                     }
+                except subprocess.TimeoutExpired:
+                    return {"error": "The script exceeded its 30-second time limit.", "script": s_path.name}
                 except Exception as e:
                     return {"error": str(e), "script": s_path.name}
             return _handler
 
         # Scan for additional Python scripts that look like tools
         py_files = list(repo_dir.rglob("*.py"))
+        tool_candidates = [
+            path
+            for path in py_files
+            if not any(
+                part.lower() in {"test", "tests", "docs", "examples", ".venv", "venv", "site-packages"}
+                for part in path.relative_to(repo_dir).parts[:-1]
+            )
+            and not path.stem.lower().startswith("test_")
+        ]
         _tool_patterns = re.compile(
             r"def\s+(main|run|handler|execute|process|cli)\s*\(|if\s+__name__\s*==\s*['\"]__main__['\"]", re.IGNORECASE
         )
         tool_script_map: dict[str, Path] = {}
 
-        for py_file in py_files[:50]:  # safety cap
+        for py_file in tool_candidates[:50]:  # safety cap
             try:
                 content = py_file.read_text(encoding="utf-8", errors="ignore")
                 if _tool_patterns.search(content):
@@ -264,8 +290,8 @@ async def import_repo(request: ImportRequest) -> dict:
                 continue
 
         # If still no tools discovered, register top-level python file as fallback tool
-        if not manifests and py_files:
-            fallback_py = py_files[0]
+        if not manifests and tool_candidates:
+            fallback_py = tool_candidates[0]
             name = re.sub(r"[^a-zA-Z0-9_]", "_", fallback_py.stem)
             tid = f"github.python.{name}"
             m = ToolManifest(
@@ -317,11 +343,49 @@ async def import_repo(request: ImportRequest) -> dict:
                 }
             )
 
+        # Use the README to name and describe script tools in plain language.
+        # The model may only annotate script paths found in this checkout.
+        readme_for_llm = ""
+        readme_path = repo_dir / "README.md"
+        if readme_path.is_file():
+            try:
+                readme_for_llm = readme_path.read_text(encoding="utf-8", errors="ignore")[:12000]
+            except OSError:
+                pass
+        candidate_paths = [
+            {"path": str(path.relative_to(repo_dir)).replace("\\", "/"), "name": path.stem}
+            for path in tool_script_map.values()
+        ]
+        from src.services.llm_service import llm_service
+
+        descriptions = await llm_service.describe_repository_tools(clean_url, readme_for_llm, candidate_paths)
+        for manifest in manifests:
+            script_path = tool_script_map.get(manifest.tool_id)
+            if script_path is None:
+                continue
+            relative_path = str(script_path.relative_to(repo_dir)).replace("\\", "/")
+            info = descriptions.get(relative_path)
+            if not info:
+                continue
+            capabilities = list(dict.fromkeys(
+                [*manifest.capabilities, *[item.strip() for item in info["capabilities"].split(",") if item.strip()]]
+            ))[:12]
+            updated_manifest = manifest.model_copy(update={
+                "name": info["name"],
+                "description": info["description"],
+                "capabilities": capabilities,
+            })
+            _registry.unregister(manifest.tool_id)
+            _registry.register(updated_manifest)
+            for item in tools_found:
+                if item["tool_id"] == manifest.tool_id:
+                    item.update({"name": info["name"], "description": info["description"], "capabilities": capabilities})
+
         # Store metadata
         _imported_repos[repo_name] = {
             "name": repo_name,
-            "url": request.url,
-            "branch": request.branch,
+            "url": clean_url,
+            "branch": selected_branch,
             "tools": tools_found,
             "total_files": index_result.total_files,
             "languages": dict(index_result.languages),
@@ -343,9 +407,10 @@ async def import_repo(request: ImportRequest) -> dict:
 
     except Exception as exc:
         logger.exception("github.import_failed", url=request.url)
+        reason = str(exc).strip() or f"{type(exc).__name__}. Check the server log for details."
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Import failed: {exc}",
+            detail=f"Import failed: {reason}",
         ) from exc
 
 

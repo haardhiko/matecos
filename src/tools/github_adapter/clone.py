@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import shutil
 import tempfile
+import hashlib
+import subprocess
 from pathlib import Path
 
 import structlog
@@ -60,10 +62,13 @@ class RepositoryCloner:
 
         # Derive a safe directory name from the URL
         repo_name = repo_url.rstrip("/").split("/")[-1].replace(".git", "")
-        dest = self._root / repo_name
+        cache_key = f"{repo_url}#{ref}"
+        suffix = hashlib.sha256(cache_key.encode("utf-8")).hexdigest()[:10]
+        dest = self._root / f"{repo_name}-{suffix}"
 
         if dest.exists():
             if (dest / ".git").exists():
+                self._cloned[repo_url] = dest
                 self._log.info("clone.already_exists", repo=repo_name)
                 return dest
             else:
@@ -83,22 +88,24 @@ class RepositoryCloner:
             if dest.exists():
                 shutil.rmtree(dest, ignore_errors=True)
             try:
-                process = await asyncio.create_subprocess_exec(
-                    *cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
+                process = await asyncio.to_thread(
+                    subprocess.run,
+                    cmd,
+                    capture_output=True,
+                    check=False,
+                    timeout=120,
                 )
-                stdout, stderr = await process.communicate()
-
                 if process.returncode == 0:
                     self._cloned[repo_url] = dest
                     self._log.info("clone.complete", repo=repo_name, path=str(dest))
                     return dest
                 else:
-                    last_error = stderr.decode(errors="replace")[:500]
+                    last_error = process.stderr.decode(errors="replace")[:500]
                     self._log.warning("clone.attempt_failed", cmd=cmd, error=last_error)
             except FileNotFoundError:
                 raise CloneError("git is not installed or not on PATH.") from None
+            except subprocess.TimeoutExpired:
+                raise CloneError("git clone timed out after 120 seconds.") from None
 
         raise CloneError(f"git clone failed: {last_error}")
 

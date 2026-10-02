@@ -321,7 +321,7 @@ async def platform_health(req: Request) -> dict:
 
 class LLMUpdatePayload(BaseModel):
     provider: str
-    api_key: str
+    api_key: str = ""
     model: str = "gemini-1.5-flash"
     base_url: str = ""
     enabled: bool = True
@@ -351,9 +351,11 @@ async def get_llm_status() -> dict:
 async def update_llm_config(payload: LLMUpdatePayload) -> dict:
     """Update and save LLM configuration."""
     from src.services.llm_service import llm_service, LLMConfigModel
+    # An empty key means the user left the password field unchanged.
+    api_key = payload.api_key.strip() or llm_service.config.api_key
     new_cfg = LLMConfigModel(
         provider=payload.provider.lower(),
-        api_key=payload.api_key.strip(),
+        api_key=api_key,
         model=payload.model.strip(),
         base_url=payload.base_url.strip(),
         enabled=payload.enabled,
@@ -374,4 +376,3 @@ async def test_llm_connection() -> dict:
         return {"status": "success", "response": reply.strip()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"LLM connection test failed: {str(e)}")
-

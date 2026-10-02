@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MATECOS Platform | Autonomous AI Tool Ecosystem</title>
+    <title>MATECOS | Tool workspace</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -197,6 +197,29 @@
             grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
             gap: 20px;
             margin-bottom: 28px;
+        }
+        .overview-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        .import-form {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+            align-items: flex-end;
+        }
+        @media (max-width: 760px) {
+            #sidebar { width: var(--sidebar-collapsed-width); }
+            #sidebar .nav-label { display: none; }
+            .top-bar { padding: 0 16px; }
+            .page { padding: 20px 16px; }
+            .grid-cards { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+            .overview-grid { grid-template-columns: 1fr; gap: 12px; }
+            .import-form { flex-wrap: wrap; }
+            .import-form .branch-field { width: 100% !important; }
+            .import-form #btn-import { flex: 1; }
         }
         .stat-card .stat-value {
             font-size: 28px;
@@ -586,32 +609,32 @@
         <!-- 1. Dashboard Page -->
         <section id="page-dashboard" class="page active">
             <h1>Platform Overview</h1>
-            <p style="margin-bottom: 24px;">Autonomous AI tool ecosystem telemetry and real-time execution statistics.</p>
+            <p style="margin-bottom: 24px;">A quick view of your tools, recent runs, and system status.</p>
             
             <div class="grid-cards">
                 <div class="card stat-card">
                     <span class="input-label">Total Registered Tools</span>
                     <div class="stat-value" id="stat-tools">--</div>
-                    <div class="stat-sub"><i data-lucide="box" style="width:14px;"></i> Across 6 tool domains</div>
+                    <div class="stat-sub"><i data-lucide="box" style="width:14px;"></i> Available in the registry</div>
                 </div>
                 <div class="card stat-card">
                     <span class="input-label">Total Executions</span>
                     <div class="stat-value" id="stat-execs">--</div>
-                    <div class="stat-sub"><i data-lucide="activity" style="width:14px;"></i> Live session tasks</div>
+                    <div class="stat-sub"><i data-lucide="activity" style="width:14px;"></i> Tasks run so far</div>
                 </div>
                 <div class="card stat-card">
                     <span class="input-label">Success Rate</span>
                     <div class="stat-value" id="stat-success" style="color: var(--success);">--</div>
-                    <div class="stat-sub"><i data-lucide="check-circle" style="width:14px;"></i> Zero unhandled faults</div>
+                    <div class="stat-sub"><i data-lucide="check-circle" style="width:14px;"></i> Successful runs</div>
                 </div>
                 <div class="card stat-card">
                     <span class="input-label">Avg Execution Latency</span>
                     <div class="stat-value" id="stat-latency">--</div>
-                    <div class="stat-sub"><i data-lucide="zap" style="width:14px;"></i> Sub-millisecond dispatch</div>
+                    <div class="stat-sub"><i data-lucide="zap" style="width:14px;"></i> Time per run</div>
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 24px;">
+            <div class="overview-grid">
                 <div class="card">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                         <h3>Tool Categories Distribution</h3>
@@ -690,8 +713,8 @@
 
         <!-- 3. Task Runner Page -->
         <section id="page-task-runner" class="page">
-            <h1>Autonomous Task Runner</h1>
-            <p style="margin-bottom: 24px;">Submit any natural language goal. MATECOS automatically detects required capabilities, picks the optimal tool, and executes it.</p>
+            <h1>Run a task</h1>
+            <p style="margin-bottom: 24px;">Describe what you need. MATECOS will choose a matching tool and show the result in plain language.</p>
             
             <div class="card" style="margin-bottom: 24px;">
                 <div class="input-group">
@@ -806,19 +829,19 @@
 
         <!-- 5. Import Tools Page -->
         <section id="page-import-tools" class="page">
-            <h1>GitHub Repository Tool Importer</h1>
-            <p style="margin-bottom: 24px;">Point to any public GitHub repository. MATECOS clones the repository, indexes files, automatically discovers tools and entry points, and registers them into the live ecosystem.</p>
+            <h1>Import tools from GitHub</h1>
+            <p style="margin-bottom: 24px;">Paste a public repository link, or a link to a branch or file. MATECOS will look for runnable Python scripts and use the repository README to describe them.</p>
             
             <div class="card" style="margin-bottom: 28px;">
                 <h3>Custom Repository Import</h3>
-                <div style="display: flex; gap: 12px; margin-top: 16px; align-items: flex-end;">
+                <div class="import-form">
                     <div class="input-group" style="flex: 1; margin: 0;">
-                        <label class="input-label">GitHub Repository URL</label>
-                        <input type="text" id="import-url" class="input" placeholder="https://github.com/username/repo">
+                        <label class="input-label">Repository, branch, or file link</label>
+                        <input type="text" id="import-url" class="input" placeholder="https://github.com/owner/repository/tree/main">
                     </div>
-                    <div class="input-group" style="width: 140px; margin: 0;">
+                    <div class="input-group branch-field" style="width: 140px; margin: 0;">
                         <label class="input-label">Branch</label>
-                        <input type="text" id="import-branch" class="input" value="main">
+                        <input type="text" id="import-branch" class="input" placeholder="From link or default branch">
                     </div>
                     <button class="btn btn-primary" onclick="importRepo()" id="btn-import" style="height: 42px;">
                         <i data-lucide="download"></i> Import Repo
@@ -826,8 +849,8 @@
                 </div>
             </div>
 
-            <h2 style="margin-bottom: 12px;">Curated 1-Click Repositories</h2>
-            <p style="margin-bottom: 16px;">Tested public repositories with powerful utilities ready for instant import.</p>
+            <h2 style="margin-bottom: 12px;">Example repositories</h2>
+            <p style="margin-bottom: 16px;">Choose a repository to try the import flow.</p>
             
             <div class="grid-cards" style="margin-bottom: 32px;">
                 <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
@@ -852,19 +875,6 @@
                         <p style="font-size: 13px; margin-bottom: 14px;">Composable command line interface creation kit with parameter parsers.</p>
                     </div>
                     <button class="btn btn-secondary btn-sm" onclick="quickImport('https://github.com/pallets/click', 'main')">
-                        <i data-lucide="download"></i> 1-Click Import
-                    </button>
-                </div>
-
-                <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
-                    <div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <strong style="font-size: 15px;">seatgeek/thefuzz</strong>
-                            <span class="badge badge-info">Python</span>
-                        </div>
-                        <p style="font-size: 13px; margin-bottom: 14px;">Fuzzy string matching like Levenshtein distance calculations in Python.</p>
-                    </div>
-                    <button class="btn btn-secondary btn-sm" onclick="quickImport('https://github.com/seatgeek/thefuzz', 'master')">
                         <i data-lucide="download"></i> 1-Click Import
                     </button>
                 </div>
@@ -977,7 +987,7 @@
                         <span class="badge badge-info">POST</span>
                         <code>/v1/tasks/run</code>
                     </div>
-                    <p>Natural-language autonomous tool selection and execution.</p>
+                    <p>Choose a tool for a written task and run it.</p>
                 </div>
                 <div class="card" style="margin-bottom: 16px;">
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
@@ -1011,10 +1021,10 @@
             <div style="max-width: 680px; display: flex; flex-direction: column; gap: 20px;">
                 <div class="card">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                        <h3>LLM Intelligence Engine</h3>
+                        <h3>Language model</h3>
                         <span id="llm-status-badge" class="badge badge-outline">Checking...</span>
                     </div>
-                    <p style="margin-bottom: 16px;">Connect any LLM provider (Google Gemini, OpenAI, Claude, Groq, Ollama) to enable natural language task planning and plain-English answer explanations.</p>
+                    <p style="margin-bottom: 16px;">Connect a model to help choose tools, describe imported scripts, and explain results. Without a model, task selection uses built-in matching rules.</p>
                     
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
                         <div class="input-group" style="margin: 0;">
@@ -1048,7 +1058,7 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 18px;">
                         <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
                             <input type="checkbox" id="llm-enabled" checked>
-                            <strong>Enable LLM Intelligence</strong>
+                            <strong>Use model assistance</strong>
                         </label>
                         <div style="display: flex; gap: 10px;">
                             <button class="btn btn-secondary btn-sm" onclick="testLLMConnection()" id="btn-test-llm">
@@ -1652,7 +1662,7 @@
 
         async function importRepo() {
             const url = document.getElementById('import-url').value.trim();
-            const branch = document.getElementById('import-branch').value.trim() || 'main';
+            const branch = document.getElementById('import-branch').value.trim();
             if (!url) return showToast('Please enter a GitHub repository URL', 'warning');
 
             const btn = document.getElementById('btn-import');
@@ -1666,7 +1676,12 @@
                     body: JSON.stringify({ url, branch })
                 });
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.detail || 'Import failed');
+                if (!res.ok) {
+                    const detail = Array.isArray(data.detail)
+                        ? data.detail.map(item => item.msg || JSON.stringify(item)).join('; ')
+                        : (data.detail || data.message || 'Import failed');
+                    throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+                }
 
                 showToast(`Successfully extracted ${data.tools_found} tools from ${data.repo}!`, 'success');
                 document.getElementById('import-url').value = '';
