@@ -66,6 +66,14 @@ class EpisodicMemoryStore:
         self._retention_days = retention_days
         self._episodes: dict[str, Episode] = {}
         self._log = logger.bind(component="EpisodicMemoryStore")
+        
+        # Native SIMD Vector Index
+        try:
+            from src.memory.vector_index import VectorIndex
+            self._vector_index = VectorIndex(dim=128)
+        except Exception as e:
+            self._log.warning("episodic.vector_index_init_failed", error=str(e))
+            self._vector_index = None
 
     async def store(self, episode: Episode) -> str:
         """Store a new episode.
@@ -77,6 +85,18 @@ class EpisodicMemoryStore:
             The episode ID.
         """
         self._episodes[episode.episode_id] = episode
+        
+        # Index in native vector index if available
+        if self._vector_index is not None:
+            doc_text = f"{episode.goal} {' '.join(episode.lessons)} {' '.join(episode.tags)}"
+            try:
+                self._vector_index.add_text(
+                    text=doc_text,
+                    metadata={"episode_id": episode.episode_id},
+                )
+            except Exception as e:
+                self._log.debug("episodic.vector_index_add_failed", error=str(e))
+
         self._log.info(
             "episodic.stored",
             episode_id=episode.episode_id,
@@ -145,7 +165,7 @@ class EpisodicMemoryStore:
         return results
 
     async def get_similar_episodes(self, goal: str, limit: int = 5) -> list[Episode]:
-        """Find episodes with similar goals (keyword-based).
+        """Find episodes with similar goals using SIMD vector search or keyword fallback.
 
         Args:
             goal: The goal to find similar episodes for.
@@ -154,7 +174,21 @@ class EpisodicMemoryStore:
         Returns:
             List of similar episodes.
         """
-        # Simple keyword extraction
+        # 1. Native SIMD vector search if index is active
+        if self._vector_index is not None and self._vector_index.size > 0:
+            try:
+                matches = self._vector_index.search_text(goal, k=limit)
+                episodes = []
+                for _, score, meta in matches:
+                    ep_id = meta.get("episode_id")
+                    if ep_id and ep_id in self._episodes:
+                        episodes.append(self._episodes[ep_id])
+                if episodes:
+                    return episodes
+            except Exception as e:
+                self._log.debug("episodic.vector_search_failed_fallback", error=str(e))
+
+        # 2. Keyword extraction fallback
         words = [w.lower() for w in goal.split() if len(w) > 3]
         return await self.search(keywords=words[:10], limit=limit)
 

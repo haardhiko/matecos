@@ -1,0 +1,14 @@
+[package]
+name = "matecos_native"
+version = "0.1.0"
+edition = "2021"
+description = "High-performance native Rust extensions for MATECOS (SIMD & fast filesystem traversal)"
+
+[lib]
+name = "matecos_native"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pyo3 = { version = "0.22", features = ["extension-module"] }
+rayon = "1.10"
+walkdir = "2.5"
