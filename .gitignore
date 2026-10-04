@@ -36,3 +36,6 @@ htmlcov/
 # Environment files
 .env
 *.local
+
+# Runtime configuration & state
+config/*.json

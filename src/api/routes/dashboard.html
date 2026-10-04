@@ -6,20 +6,20 @@
     <title>MATECOS Platform | Autonomous AI Tool Ecosystem</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
             --bg-color: #09090b;
             --sidebar-bg: #0d0d11;
             --surface: #141418;
-            --surface-hover: #1c1c22;
+            --surface-hover: #1c1c23;
             --surface-glass: rgba(20, 20, 24, 0.85);
             --border: #24242c;
             --border-hover: #3b3b47;
-            --primary: #6366f1;
-            --primary-hover: #4f46e5;
-            --primary-subtle: rgba(99, 102, 241, 0.12);
+            --primary: #FF3D00;
+            --primary-hover: #e03600;
+            --primary-subtle: rgba(255, 61, 0, 0.12);
             --success: #22c55e;
             --success-subtle: rgba(34, 197, 94, 0.12);
             --warning: #f59e0b;
@@ -33,13 +33,14 @@
             --text-dim: #60606d;
             --sidebar-width: 260px;
             --sidebar-collapsed-width: 68px;
+            --radius: 0px;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Inter', system-ui, sans-serif;
+            font-family: 'Inter Tight', 'Inter', system-ui, sans-serif;
         }
 
         body {
@@ -515,6 +516,229 @@
 
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* ══════════════════════════════════════════════════════════════════
+           AGENT CHAT & LIVE EXECUTION TRACE STYLES
+        ══════════════════════════════════════════════════════════════════ */
+        #page-chat.active {
+            display: flex;
+            padding: 0;
+            overflow: hidden;
+            height: calc(100vh - 64px);
+        }
+        .chat-workspace {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        .chat-sessions-pane {
+            width: 270px;
+            background-color: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .chat-sessions-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .chat-sessions-header span {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+        }
+        .chat-sessions-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .chat-session-item {
+            padding: 10px 12px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.15s;
+        }
+        .chat-session-item:hover {
+            background-color: var(--surface-hover);
+            border-color: var(--border);
+        }
+        .chat-session-item.active {
+            background-color: var(--surface-hover);
+            border-color: var(--border-hover);
+            border-left: 2px solid var(--primary);
+        }
+        .chat-session-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .chat-content-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-color);
+            overflow: hidden;
+        }
+        .chat-top-header {
+            height: 56px;
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: var(--surface);
+        }
+        .chat-messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 28px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .chat-empty-state {
+            margin: auto;
+            text-align: center;
+            max-width: 680px;
+            padding: 24px;
+        }
+        .chat-empty-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+            color: var(--primary);
+        }
+        .chat-msg {
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.2s ease-out;
+        }
+        .chat-msg.user {
+            align-self: flex-end;
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            padding: 12px 18px;
+            max-width: 80%;
+        }
+        .chat-msg.assistant {
+            align-self: flex-start;
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--primary);
+            padding: 18px 22px;
+            width: 100%;
+            max-width: 900px;
+        }
+        .chat-trace-container {
+            border: 1px solid var(--border);
+            margin-top: 14px;
+            background: #09090b;
+        }
+        .chat-trace-header {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+        .chat-trace-body {
+            padding: 12px;
+        }
+        .chat-trace-stages {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .chat-trace-stage {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .stage-dot {
+            width: 7px;
+            height: 7px;
+            margin-top: 5px;
+            flex-shrink: 0;
+            display: inline-block;
+        }
+        .stage-dot.done { background-color: var(--success); }
+        .stage-dot.failed { background-color: var(--error); }
+        .stage-dot.skipped { background-color: var(--text-dim); }
+        .chat-composer-box {
+            border-top: 1px solid var(--border);
+            padding: 16px 24px;
+            background-color: var(--surface);
+        }
+        .chat-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        .chat-textarea {
+            flex: 1;
+            resize: none;
+            min-height: 44px;
+            max-height: 180px;
+            padding: 10px 14px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            font-size: 14px;
+            line-height: 1.5;
+            outline: none;
+        }
+        .chat-textarea:focus {
+            border-color: var(--primary);
+        }
+        .chat-send-btn {
+            height: 44px;
+            width: 44px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .chat-composer-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+        .chat-composer-footer kbd {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border);
+            padding: 1px 4px;
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+        }
     </style>
 </head>
 <body>
@@ -526,7 +750,11 @@
             <span class="nav-label">MATECOS API</span>
         </div>
         <nav class="nav-list">
-            <a class="nav-item active" data-target="dashboard">
+            <a class="nav-item active" data-target="chat">
+                <i data-lucide="message-square"></i>
+                <span class="nav-label">Agent Chat</span>
+            </a>
+            <a class="nav-item" data-target="dashboard">
                 <i data-lucide="layout-dashboard"></i>
                 <span class="nav-label">Dashboard</span>
             </a>
@@ -583,8 +811,75 @@
             </div>
         </header>
 
+        <!-- 0. Agent Chat Page -->
+        <section id="page-chat" class="page active">
+            <div class="chat-workspace">
+                <!-- Chat Sessions Drawer -->
+                <aside class="chat-sessions-pane">
+                    <div class="chat-sessions-header">
+                        <span>CONVERSATIONS</span>
+                        <button class="btn btn-primary btn-sm" onclick="startNewChat()" style="padding: 4px 10px; font-size: 11px;">
+                            <i data-lucide="plus" style="width: 12px;"></i> New
+                        </button>
+                    </div>
+                    <div id="chat-sessions-list" class="chat-sessions-list">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </aside>
+
+                <!-- Chat Main Area -->
+                <div class="chat-content-pane">
+                    <div class="chat-top-header">
+                        <div>
+                            <h2 id="active-chat-title" style="margin: 0; font-size: 15px; font-weight: 600;">Autonomous Workspace</h2>
+                            <span style="font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace;" id="active-chat-id">MATECOS Agent Shell</span>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <span class="badge badge-outline" style="font-size: 11px;"><i data-lucide="cpu" style="width: 12px; margin-right: 4px;"></i> 15 Tools Online</span>
+                            <button class="btn btn-secondary btn-sm" onclick="renameCurrentChat()" title="Rename Session">
+                                <i data-lucide="edit-3" style="width: 13px;"></i>
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="deleteCurrentChat()" title="Delete Session" style="color: var(--error);">
+                                <i data-lucide="trash-2" style="width: 13px;"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="chat-messages" class="chat-messages-container">
+                        <!-- Empty Welcome State -->
+                        <div class="chat-empty-state">
+                            <div class="chat-empty-icon"><i data-lucide="sparkles"></i></div>
+                            <h2>MATECOS Conversational Execution</h2>
+                            <p style="max-width: 540px; margin: 8px auto 24px; font-size: 13px;">Ask any question or submit tasks. MATECOS parses your goal, searches available capabilities across all registered tools, evaluates risk, executes in isolation, and synthesizes verifiable answers with full execution traces.</p>
+                            <div class="chips" style="justify-content: center; max-width: 600px;">
+                                <div class="chip" onclick="fillChatPrompt('Calculate 45 * 12 + sqrt(81)')">🧮 Calculate 45 * 12 + sqrt(81)</div>
+                                <div class="chip" onclick="fillChatPrompt('Generate 3 cryptographically secure UUIDs')">🆔 Generate 3 UUIDs</div>
+                                <div class="chip" onclick="fillChatPrompt('Create a 24-character strong password with symbols')">🔑 24-char Password</div>
+                                <div class="chip" onclick="fillChatPrompt('Convert 100 celsius to fahrenheit')">🌡️ Convert 100 C to F</div>
+                                <div class="chip" onclick="fillChatPrompt('Count words in: MATECOS autonomously manages tools and repositories')">📝 Count Words</div>
+                                <div class="chip" onclick="fillChatPrompt('Compute SHA-256 hash for text: secure-agent-payload')">🔒 SHA-256 Hash</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chat-composer-box">
+                        <div class="chat-input-wrapper">
+                            <textarea id="chat-user-input" class="chat-textarea" placeholder="Command MATECOS or ask a question... (Enter to send, Shift+Enter for newline)" rows="1" onkeydown="handleChatKey(event)" oninput="autoGrowChat(this)"></textarea>
+                            <button id="btn-chat-send" class="btn btn-primary chat-send-btn" onclick="submitChatTurn()">
+                                <i data-lucide="send"></i>
+                            </button>
+                        </div>
+                        <div class="chat-composer-footer">
+                            <span>Press <kbd>Enter</kbd> to execute • Backed by 15 registered tools + imported GitHub repositories</span>
+                            <span id="chat-turn-indicator" style="display: none; color: var(--primary); font-family: 'JetBrains Mono', monospace;"><i data-lucide="loader" class="spin" style="width: 12px; display: inline-block;"></i> Executing real pipeline...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- 1. Dashboard Page -->
-        <section id="page-dashboard" class="page active">
+        <section id="page-dashboard" class="page">
             <h1>Platform Overview</h1>
             <p style="margin-bottom: 24px;">Autonomous AI tool ecosystem telemetry and real-time execution statistics.</p>
             
@@ -1133,7 +1428,7 @@
     <script>
         lucide.createIcons();
 
-        const API_BASE = '/v1';
+        const API_BASE = (window.location.protocol.startsWith('http') && window.location.origin !== 'null') ? '/v1' : 'http://localhost:8000/v1';
         const HEADERS = {
             'Authorization': 'Bearer dev-test-token',
             'Content-Type': 'application/json'
@@ -1146,9 +1441,11 @@
                 else n.classList.remove('active');
             });
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById('page-' + target).classList.add('active');
+            const pageEl = document.getElementById('page-' + target);
+            if (pageEl) pageEl.classList.add('active');
 
             const labels = {
+                'chat': 'Platform / Agent Chat',
                 'dashboard': 'Platform / Overview',
                 'catalog': 'Platform / Tool Catalog',
                 'task-runner': 'Platform / Task Runner',
@@ -1159,6 +1456,11 @@
             };
             document.getElementById('page-breadcrumb').innerText = labels[target] || 'Platform';
 
+            if (window.location.hash !== '#' + target) {
+                try { history.replaceState(null, '', '#' + target); } catch (e) {}
+            }
+
+            if (target === 'chat') loadConversations();
             if (target === 'dashboard') loadDashboard();
             if (target === 'catalog') loadCatalog();
             if (target === 'task-runner') loadTaskHistory();
@@ -1197,6 +1499,358 @@
                 toast.style.transition = 'all 0.3s ease';
                 setTimeout(() => toast.remove(), 300);
             }, 3200);
+        }
+
+        // ══════════════════════════════════════════════════════════════════
+        // 0. Agent Chat Subsystem & Execution Trace Viewer
+        // ══════════════════════════════════════════════════════════════════
+        let currentConversationId = null;
+        let conversationsList = [];
+
+        async function loadConversations() {
+            try {
+                const res = await fetch(`${API_BASE}/conversations`, { headers: HEADERS });
+                if (!res.ok) throw new Error('Failed to load conversations');
+                conversationsList = await res.json();
+                renderConversationsList();
+                if (!currentConversationId && conversationsList.length > 0) {
+                    selectConversation(conversationsList[0].id);
+                } else if (!currentConversationId) {
+                    renderEmptyChat();
+                }
+            } catch (err) {
+                console.error("Conversations load error:", err);
+            }
+        }
+
+        function renderConversationsList() {
+            const listEl = document.getElementById('chat-sessions-list');
+            listEl.innerHTML = '';
+            if (conversationsList.length === 0) {
+                listEl.innerHTML = '<div style="padding: 16px 12px; color: var(--text-dim); font-size: 12px; line-height: 1.5;">No active chats.<br>Click "+ New" above to start.</div>';
+                return;
+            }
+            conversationsList.forEach(c => {
+                const item = document.createElement('div');
+                item.className = 'chat-session-item' + (c.id === currentConversationId ? ' active' : '');
+                item.onclick = (e) => {
+                    if (e.target.closest('button')) return;
+                    selectConversation(c.id);
+                };
+                const timeStr = c.updated_at ? new Date(c.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                item.innerHTML = `
+                    <div style="overflow: hidden; flex: 1; margin-right: 6px;">
+                        <div class="chat-session-title">${escapeHtml(c.title)}</div>
+                        <div style="font-size: 11px; color: var(--text-dim); display: flex; gap: 6px; margin-top: 2px;">
+                            <span>${c.message_count} msgs</span>
+                            <span>•</span>
+                            <span>${timeStr}</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 2px;">
+                        <button class="btn-icon" onclick="renameChat('${c.id}', event)" title="Rename" style="padding: 4px;"><i data-lucide="edit-2" style="width: 12px;"></i></button>
+                        <button class="btn-icon" onclick="deleteChat('${c.id}', event)" title="Delete" style="padding: 4px; color: var(--error);"><i data-lucide="trash-2" style="width: 12px;"></i></button>
+                    </div>
+                `;
+                listEl.appendChild(item);
+            });
+            lucide.createIcons();
+        }
+
+        async function selectConversation(convId) {
+            currentConversationId = convId;
+            renderConversationsList();
+            const msgContainer = document.getElementById('chat-messages');
+            msgContainer.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-muted);"><i data-lucide="loader" class="spin"></i> Loading conversation messages...</div>';
+            lucide.createIcons();
+
+            try {
+                const res = await fetch(`${API_BASE}/conversations/${convId}`, { headers: HEADERS });
+                if (!res.ok) throw new Error('Failed to fetch conversation');
+                const conv = await res.json();
+                document.getElementById('active-chat-title').innerText = conv.title;
+                document.getElementById('active-chat-id').innerText = `${conv.id} • ${conv.messages.length} messages`;
+                renderConversationMessages(conv.messages);
+            } catch (err) {
+                showToast(err.message, 'error');
+                msgContainer.innerHTML = `<div style="padding: 24px; color: var(--error);">Error: ${err.message}</div>`;
+            }
+        }
+
+        async function startNewChat() {
+            try {
+                const res = await fetch(`${API_BASE}/conversations`, {
+                    method: 'POST',
+                    headers: HEADERS,
+                    body: JSON.stringify({ title: 'New Conversation' })
+                });
+                if (!res.ok) throw new Error('Failed to create new conversation');
+                const newConv = await res.json();
+                currentConversationId = newConv.id;
+                await loadConversations();
+                selectConversation(newConv.id);
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        function renderEmptyChat() {
+            document.getElementById('active-chat-title').innerText = 'New Conversation';
+            document.getElementById('active-chat-id').innerText = 'MATECOS Agent Shell';
+            const msgContainer = document.getElementById('chat-messages');
+            msgContainer.innerHTML = `
+                <div class="chat-empty-state">
+                    <div class="chat-empty-icon"><i data-lucide="sparkles"></i></div>
+                    <h2>MATECOS Conversational Execution</h2>
+                    <p style="max-width: 540px; margin: 8px auto 24px; font-size: 13px;">Ask any question or submit tasks. MATECOS parses your goal, searches available capabilities across all registered tools, evaluates risk, executes in isolation, and synthesizes verifiable answers with full execution traces.</p>
+                    <div class="chips" style="justify-content: center; max-width: 600px;">
+                        <div class="chip" onclick="fillChatPrompt('Calculate 45 * 12 + sqrt(81)')">🧮 Calculate 45 * 12 + sqrt(81)</div>
+                        <div class="chip" onclick="fillChatPrompt('Generate 3 cryptographically secure UUIDs')">🆔 Generate 3 UUIDs</div>
+                        <div class="chip" onclick="fillChatPrompt('Create a 24-character strong password with symbols')">🔑 24-char Password</div>
+                        <div class="chip" onclick="fillChatPrompt('Convert 100 celsius to fahrenheit')">🌡️ Convert 100 C to F</div>
+                        <div class="chip" onclick="fillChatPrompt('Count words in: MATECOS autonomously manages tools and repositories')">📝 Count Words</div>
+                        <div class="chip" onclick="fillChatPrompt('Compute SHA-256 hash for text: secure-agent-payload')">🔒 SHA-256 Hash</div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function renderConversationMessages(messages) {
+            const msgContainer = document.getElementById('chat-messages');
+            msgContainer.innerHTML = '';
+            if (!messages || messages.length === 0) {
+                renderEmptyChat();
+                return;
+            }
+
+            messages.forEach(m => {
+                appendChatMessageToDOM(m);
+            });
+            msgContainer.scrollTop = msgContainer.scrollHeight;
+        }
+
+        function appendChatMessageToDOM(m) {
+            const msgContainer = document.getElementById('chat-messages');
+            const emptyState = msgContainer.querySelector('.chat-empty-state');
+            if (emptyState) emptyState.remove();
+
+            const isUser = m.role === 'user';
+            const div = document.createElement('div');
+            div.className = `chat-msg ${m.role}`;
+            div.id = `chat-${m.id}`;
+
+            const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+            if (isUser) {
+                div.innerHTML = `
+                    <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 4px; display: flex; justify-content: flex-end; gap: 6px;">
+                        <span>You</span>
+                        <span>•</span>
+                        <span>${timeStr}</span>
+                    </div>
+                    <div class="chat-msg-body" style="white-space: pre-wrap; font-size: 14px; line-height: 1.6;">${escapeHtml(m.content)}</div>
+                `;
+            } else {
+                let traceHtml = '';
+                if (m.trace) {
+                    const t = m.trace;
+                    const stageItems = (t.stages || []).map(s => {
+                        const dotClass = s.status === 'DONE' ? 'done' : (s.status === 'FAILED' ? 'failed' : 'skipped');
+                        return `
+                            <div class="chat-trace-stage">
+                                <span class="stage-dot ${dotClass}"></span>
+                                <div style="flex: 1;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <span style="font-weight: 600; color: var(--text-main); font-size: 12px;">${s.stage}: ${escapeHtml(s.name)}</span>
+                                        <span style="color: var(--text-dim); font-size: 11px;">${s.duration_ms} ms</span>
+                                    </div>
+                                    ${s.detail ? `<div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${escapeHtml(s.detail)}</div>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    let toolOutputJson = '';
+                    if (m.tool_output) {
+                        toolOutputJson = `
+                            <div style="margin-top: 8px;">
+                                <button class="btn btn-secondary btn-sm" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'" style="font-size: 11px; padding: 2px 8px;">
+                                    <i data-lucide="code" style="width: 11px;"></i> Toggle Tool Output
+                                </button>
+                                <pre style="display: none; margin-top: 6px; padding: 10px; background: #000; border: 1px solid var(--border); font-size: 11px; color: #a5d6ff; max-height: 200px; overflow-y: auto;"><code>${escapeHtml(JSON.stringify(m.tool_output, null, 2))}</code></pre>
+                            </div>
+                        `;
+                    }
+
+                    traceHtml = `
+                        <div class="chat-trace-container">
+                            <div class="chat-trace-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                                <span style="display: flex; align-items: center; gap: 8px;">
+                                    <i data-lucide="activity" style="width: 13px; color: var(--primary);"></i>
+                                    <strong>EXECUTION TRACE</strong>
+                                    <span class="badge badge-outline" style="font-size: 10px;">${t.stages.length} stages • ${t.total_duration_ms} ms</span>
+                                </span>
+                                <span style="font-size: 11px; color: var(--text-dim);">${t.execution_id} ▾</span>
+                            </div>
+                            <div class="chat-trace-body" style="display: none;">
+                                <div class="chat-trace-stages">${stageItems}</div>
+                                ${toolOutputJson}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                let toolBadge = m.tool_selected ? `<span class="badge badge-info" style="font-family: 'JetBrains Mono', monospace; font-size: 11px;"><i data-lucide="wrench" style="width: 11px; margin-right: 4px;"></i>${m.tool_selected}</span>` : '<span class="badge badge-outline" style="font-size: 11px;">Direct Synthesis</span>';
+                let latencyBadge = m.trace ? `<span class="badge badge-outline" style="font-size: 11px;">${m.trace.total_duration_ms} ms</span>` : '';
+                let statusBadge = m.status === 'COMPLETED' ? `<span class="badge badge-success" style="font-size: 11px;">SUCCEEDED</span>` : `<span class="badge badge-error" style="font-size: 11px;">${m.status}</span>`;
+
+                div.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.5px; color: var(--primary);">MATECOS AGENT</span>
+                            ${toolBadge}
+                            ${latencyBadge}
+                            ${statusBadge}
+                        </div>
+                        <span style="font-size: 11px; color: var(--text-dim);">${timeStr}</span>
+                    </div>
+                    <div class="chat-msg-body" style="font-size: 14px; line-height: 1.7; color: var(--text-main);">${formatExplanationMarkdown(m.content)}</div>
+                    ${traceHtml}
+                `;
+            }
+
+            msgContainer.appendChild(div);
+            lucide.createIcons();
+            msgContainer.scrollTop = msgContainer.scrollHeight;
+        }
+
+        async function submitChatTurn() {
+            const input = document.getElementById('chat-user-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            if (!currentConversationId) {
+                const res = await fetch(`${API_BASE}/conversations`, {
+                    method: 'POST',
+                    headers: HEADERS,
+                    body: JSON.stringify({ title: text.substring(0, 30) })
+                });
+                const conv = await res.json();
+                currentConversationId = conv.id;
+            }
+
+            const userTempMsg = {
+                id: 'temp-' + Date.now(),
+                role: 'user',
+                content: text,
+                timestamp: new Date().toISOString()
+            };
+            appendChatMessageToDOM(userTempMsg);
+            input.value = '';
+            input.style.height = '44px';
+
+            const indicator = document.getElementById('chat-turn-indicator');
+            indicator.style.display = 'inline-block';
+            const sendBtn = document.getElementById('btn-chat-send');
+            sendBtn.disabled = true;
+
+            try {
+                const res = await fetch(`${API_BASE}/conversations/${currentConversationId}/messages`, {
+                    method: 'POST',
+                    headers: HEADERS,
+                    body: JSON.stringify({ content: text })
+                });
+                const assistantMsg = await res.json();
+                if (!res.ok) throw new Error(assistantMsg.detail || 'Execution error');
+                appendChatMessageToDOM(assistantMsg);
+                loadConversations();
+            } catch (err) {
+                showToast(err.message, 'error');
+                appendChatMessageToDOM({
+                    id: 'err-' + Date.now(),
+                    role: 'assistant',
+                    content: `Execution failed: ${err.message}`,
+                    status: 'FAILED',
+                    timestamp: new Date().toISOString()
+                });
+            } finally {
+                indicator.style.display = 'none';
+                sendBtn.disabled = false;
+            }
+        }
+
+        function fillChatPrompt(prompt) {
+            const input = document.getElementById('chat-user-input');
+            input.value = prompt;
+            input.focus();
+            autoGrowChat(input);
+        }
+
+        function handleChatKey(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitChatTurn();
+            }
+        }
+
+        function autoGrowChat(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 180) + 'px';
+        }
+
+        async function renameChat(convId, e) {
+            if (e) e.stopPropagation();
+            const currentTitle = document.getElementById('active-chat-title').innerText || 'Conversation';
+            const newTitle = prompt('Enter new conversation title:', currentTitle);
+            if (!newTitle || !newTitle.trim()) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/conversations/${convId}`, {
+                    method: 'PATCH',
+                    headers: HEADERS,
+                    body: JSON.stringify({ title: newTitle.trim() })
+                });
+                if (res.ok) {
+                    showToast('Conversation renamed', 'success');
+                    if (currentConversationId === convId) {
+                        document.getElementById('active-chat-title').innerText = newTitle.trim();
+                    }
+                    loadConversations();
+                }
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        async function renameCurrentChat() {
+            if (currentConversationId) renameChat(currentConversationId, null);
+        }
+
+        async function deleteChat(convId, e) {
+            if (e) e.stopPropagation();
+            if (!confirm('Are you sure you want to delete this conversation?')) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/conversations/${convId}`, {
+                    method: 'DELETE',
+                    headers: HEADERS
+                });
+                if (res.ok) {
+                    showToast('Conversation deleted', 'info');
+                    if (currentConversationId === convId) {
+                        currentConversationId = null;
+                        renderEmptyChat();
+                    }
+                    loadConversations();
+                }
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        async function deleteCurrentChat() {
+            if (currentConversationId) deleteChat(currentConversationId, null);
         }
 
         // 1. Dashboard Logic
@@ -2000,6 +2654,19 @@ func main() {
         // Initial setup
         loadDashboard();
         loadBatchPreset();
+        loadConversations();
+
+        const initialHash = window.location.hash.replace('#', '');
+        if (initialHash && ['chat', 'dashboard', 'catalog', 'task-runner', 'batch-runner', 'import-tools', 'api-docs', 'settings'].includes(initialHash)) {
+            navTo(initialHash);
+        }
+
+        window.addEventListener('hashchange', () => {
+            const h = window.location.hash.replace('#', '');
+            if (h && ['chat', 'dashboard', 'catalog', 'task-runner', 'batch-runner', 'import-tools', 'api-docs', 'settings'].includes(h)) {
+                navTo(h);
+            }
+        });
     </script>
 </body>
 </html>

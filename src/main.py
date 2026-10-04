@@ -218,6 +218,13 @@ def create_app() -> FastAPI:
     except (ImportError, Exception) as e:
         logger.error(f"Failed to load platform_router: {e}")
 
+    try:
+        from src.api.routes.conversations import router as conversations_router
+
+        app.include_router(conversations_router)
+    except (ImportError, Exception) as e:
+        logger.error(f"Failed to load conversations_router: {e}")
+
     # Dashboard UI — serves the web interface at / and /dashboard
     try:
         from src.api.routes.ui import router as ui_router
