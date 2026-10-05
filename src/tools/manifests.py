@@ -8,6 +8,8 @@ from typing import Any, ClassVar, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from src.tools.id_generator import TOOL_ID_PATTERN, generate_tool_id, is_valid_tool_id, normalize_segment
+
 
 class RuntimeConfig(BaseModel):
     """Describes how and where a tool runs."""

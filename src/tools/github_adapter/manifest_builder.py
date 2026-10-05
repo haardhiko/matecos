@@ -14,6 +14,7 @@ from pathlib import Path
 import structlog
 
 from src.tools.github_adapter.indexer import RepoIndex
+from src.tools.id_generator import generate_tool_id
 from src.tools.manifests import (
     FilesystemPolicy,
     NetworkPolicy,
@@ -83,7 +84,7 @@ class ManifestBuilder:
     def _build_python_manifest(self, script_path: str, repo_url: str) -> ToolManifest:
         """Build a manifest for a Python script."""
         name = Path(script_path).stem
-        tool_id = f"github.python.{name}"
+        tool_id = generate_tool_id("github", "python", None, name)
 
         return ToolManifest(
             tool_id=tool_id,
@@ -130,20 +131,22 @@ class ManifestBuilder:
 
     def _build_container_manifest(self, dockerfile_path: str, repo_url: str) -> ToolManifest:
         """Build a manifest for a Dockerised tool."""
-        name = Path(dockerfile_path).parent.name or "container"
-        tool_id = f"github.container.{name}"
+        parent_name = Path(dockerfile_path).parent.name
+        raw_name = parent_name if parent_name and parent_name != "." else "container"
+        tool_id = generate_tool_id("github", "container", None, raw_name)
+        clean_name = tool_id.split(".")[-1]
 
         return ToolManifest(
             tool_id=tool_id,
-            name=f"Container: {name}",
+            name=f"Container: {clean_name}",
             description=f"Containerised tool from {repo_url}",
             version="0.1.0",
             owner=self._owner,
-            capabilities=[f"container.{name}"],
+            capabilities=[f"container.{clean_name}"],
             risk_level="high",
             runtime=RuntimeConfig(
                 type="container",
-                image=f"matecos-github-{name}:latest",
+                image=f"matecos-github-{clean_name}:latest",
             ),
             resource_limits=ResourceLimits(
                 max_memory_mb=4096,
