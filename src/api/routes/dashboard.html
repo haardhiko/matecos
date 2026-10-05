@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MATECOS Platform | Autonomous AI Tool Ecosystem</title>
+    <title>OrchaDeck Platform | Autonomous AI Tool Ecosystem</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -747,7 +747,7 @@
     <aside id="sidebar">
         <div class="sidebar-header">
             <i data-lucide="cpu"></i>
-            <span class="nav-label">MATECOS API</span>
+            <span class="nav-label">OrchaDeck</span>
         </div>
         <nav class="nav-list">
             <a class="nav-item active" data-target="chat">
@@ -832,7 +832,7 @@
                     <div class="chat-top-header">
                         <div>
                             <h2 id="active-chat-title" style="margin: 0; font-size: 15px; font-weight: 600;">Autonomous Workspace</h2>
-                            <span style="font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace;" id="active-chat-id">MATECOS Agent Shell</span>
+                            <span style="font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace;" id="active-chat-id">OrchaDeck Agent Shell</span>
                         </div>
                         <div style="display: flex; gap: 8px; align-items: center;">
                             <span class="badge badge-outline" style="font-size: 11px;"><i data-lucide="cpu" style="width: 12px; margin-right: 4px;"></i> 15 Tools Online</span>
@@ -849,14 +849,14 @@
                         <!-- Empty Welcome State -->
                         <div class="chat-empty-state">
                             <div class="chat-empty-icon"><i data-lucide="sparkles"></i></div>
-                            <h2>MATECOS Conversational Execution</h2>
-                            <p style="max-width: 540px; margin: 8px auto 24px; font-size: 13px;">Ask any question or submit tasks. MATECOS parses your goal, searches available capabilities across all registered tools, evaluates risk, executes in isolation, and synthesizes verifiable answers with full execution traces.</p>
+                            <h2>OrchaDeck Conversational Execution</h2>
+                            <p style="max-width: 540px; margin: 8px auto 24px; font-size: 13px;">Ask any question or submit tasks. OrchaDeck parses your goal, searches available capabilities across all registered tools, evaluates risk, executes in isolation, and synthesizes verifiable answers with full execution traces.</p>
                             <div class="chips" style="justify-content: center; max-width: 600px;">
                                 <div class="chip" onclick="fillChatPrompt('Calculate 45 * 12 + sqrt(81)')">🧮 Calculate 45 * 12 + sqrt(81)</div>
                                 <div class="chip" onclick="fillChatPrompt('Generate 3 cryptographically secure UUIDs')">🆔 Generate 3 UUIDs</div>
                                 <div class="chip" onclick="fillChatPrompt('Create a 24-character strong password with symbols')">🔑 24-char Password</div>
                                 <div class="chip" onclick="fillChatPrompt('Convert 100 celsius to fahrenheit')">🌡️ Convert 100 C to F</div>
-                                <div class="chip" onclick="fillChatPrompt('Count words in: MATECOS autonomously manages tools and repositories')">📝 Count Words</div>
+                                <div class="chip" onclick="fillChatPrompt('Count words in: OrchaDeck autonomously manages tools and repositories')">📝 Count Words</div>
                                 <div class="chip" onclick="fillChatPrompt('Compute SHA-256 hash for text: secure-agent-payload')">🔒 SHA-256 Hash</div>
                             </div>
                         </div>
@@ -864,7 +864,7 @@
 
                     <div class="chat-composer-box">
                         <div class="chat-input-wrapper">
-                            <textarea id="chat-user-input" class="chat-textarea" placeholder="Command MATECOS or ask a question... (Enter to send, Shift+Enter for newline)" rows="1" onkeydown="handleChatKey(event)" oninput="autoGrowChat(this)"></textarea>
+                            <textarea id="chat-user-input" class="chat-textarea" placeholder="Command OrchaDeck or ask a question... (Enter to send, Shift+Enter for newline)" rows="1" onkeydown="handleChatKey(event)" oninput="autoGrowChat(this)"></textarea>
                             <button id="btn-chat-send" class="btn btn-primary chat-send-btn" onclick="submitChatTurn()">
                                 <i data-lucide="send"></i>
                             </button>
@@ -986,7 +986,7 @@
         <!-- 3. Task Runner Page -->
         <section id="page-task-runner" class="page">
             <h1>Autonomous Task Runner</h1>
-            <p style="margin-bottom: 24px;">Submit any natural language goal. MATECOS automatically detects required capabilities, picks the optimal tool, and executes it.</p>
+            <p style="margin-bottom: 24px;">Submit any natural language goal. OrchaDeck automatically detects required capabilities, picks the optimal tool, and executes it.</p>
             
             <div class="card" style="margin-bottom: 24px;">
                 <div class="input-group">
@@ -1001,9 +1001,9 @@
                         <div class="chip" onclick="fillTask('generate 3 uuids')">🆔 Generate UUIDs</div>
                         <div class="chip" onclick="fillTask('generate a 24-character secure password')">🔑 Strong password</div>
                         <div class="chip" onclick="fillTask('convert 100 celsius to fahrenheit')">🌡️ Convert units</div>
-                        <div class="chip" onclick="fillTask('format this json: {\x22platform\x22:\x22matecos\x22,\x22version\x22:1,\x22active\x22:true}')">📄 Format JSON</div>
+                        <div class="chip" onclick="fillTask('format this json: {\x22platform\x22:\x22orchadeck\x22,\x22version\x22:1,\x22active\x22:true}')">📄 Format JSON</div>
                         <div class="chip" onclick="fillTask('hash text hello world using sha256')">🔒 SHA-256 Hash</div>
-                        <div class="chip" onclick="fillTask('base64 encode MATECOS AI Platform')">🔤 Base64 Encode</div>
+                        <div class="chip" onclick="fillTask('base64 encode OrchaDeck AI Platform')">🔤 Base64 Encode</div>
                         <div class="chip" onclick="fillTask('count words in: Autonomous agent tools empower next generation intelligent workflows')">📝 Count Words</div>
                     </div>
                 </div>
@@ -1102,7 +1102,7 @@
         <!-- 5. Import Tools Page -->
         <section id="page-import-tools" class="page">
             <h1>GitHub Repository Tool Importer</h1>
-            <p style="margin-bottom: 24px;">Point to any public GitHub repository. MATECOS clones the repository, indexes files, automatically discovers tools and entry points, and registers them into the live ecosystem.</p>
+            <p style="margin-bottom: 24px;">Point to any public GitHub repository. OrchaDeck clones the repository, indexes files, automatically discovers tools and entry points, and registers them into the live ecosystem.</p>
             
             <div class="card" style="margin-bottom: 28px;">
                 <h3>Custom Repository Import</h3>
@@ -1192,7 +1192,7 @@
         <!-- 6. API Explorer & Documentation Page -->
         <section id="page-api-docs" class="page">
             <h1>API Explorer & Documentation</h1>
-            <p style="margin-bottom: 24px;">Integrate MATECOS directly into your custom web apps, mobile apps, or backend pipelines.</p>
+            <p style="margin-bottom: 24px;">Integrate OrchaDeck directly into your custom web apps, mobile apps, or backend pipelines.</p>
 
             <div class="tabs">
                 <div class="tab active" onclick="switchApiTab('explorer', this)">Interactive API Explorer</div>
@@ -1596,19 +1596,19 @@
 
         function renderEmptyChat() {
             document.getElementById('active-chat-title').innerText = 'New Conversation';
-            document.getElementById('active-chat-id').innerText = 'MATECOS Agent Shell';
+            document.getElementById('active-chat-id').innerText = 'OrchaDeck Agent Shell';
             const msgContainer = document.getElementById('chat-messages');
             msgContainer.innerHTML = `
                 <div class="chat-empty-state">
                     <div class="chat-empty-icon"><i data-lucide="sparkles"></i></div>
-                    <h2>MATECOS Conversational Execution</h2>
-                    <p style="max-width: 540px; margin: 8px auto 24px; font-size: 13px;">Ask any question or submit tasks. MATECOS parses your goal, searches available capabilities across all registered tools, evaluates risk, executes in isolation, and synthesizes verifiable answers with full execution traces.</p>
+                    <h2>OrchaDeck Conversational Execution</h2>
+                    <p style="max-width: 540px; margin: 8px auto 24px; font-size: 13px;">Ask any question or submit tasks. OrchaDeck parses your goal, searches available capabilities across all registered tools, evaluates risk, executes in isolation, and synthesizes verifiable answers with full execution traces.</p>
                     <div class="chips" style="justify-content: center; max-width: 600px;">
                         <div class="chip" onclick="fillChatPrompt('Calculate 45 * 12 + sqrt(81)')">🧮 Calculate 45 * 12 + sqrt(81)</div>
                         <div class="chip" onclick="fillChatPrompt('Generate 3 cryptographically secure UUIDs')">🆔 Generate 3 UUIDs</div>
                         <div class="chip" onclick="fillChatPrompt('Create a 24-character strong password with symbols')">🔑 24-char Password</div>
                         <div class="chip" onclick="fillChatPrompt('Convert 100 celsius to fahrenheit')">🌡️ Convert 100 C to F</div>
-                        <div class="chip" onclick="fillChatPrompt('Count words in: MATECOS autonomously manages tools and repositories')">📝 Count Words</div>
+                        <div class="chip" onclick="fillChatPrompt('Count words in: OrchaDeck autonomously manages tools and repositories')">📝 Count Words</div>
                         <div class="chip" onclick="fillChatPrompt('Compute SHA-256 hash for text: secure-agent-payload')">🔒 SHA-256 Hash</div>
                     </div>
                 </div>
@@ -1708,7 +1708,7 @@
                 div.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.5px; color: var(--primary);">MATECOS AGENT</span>
+                            <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.5px; color: var(--primary);">ORCHADECK AGENT</span>
                             ${toolBadge}
                             ${latencyBadge}
                             ${statusBadge}
@@ -2207,7 +2207,7 @@
             addBatchRow('generate 5 uuids');
             addBatchRow('create a secure password');
             addBatchRow('convert 100 celsius to fahrenheit');
-            addBatchRow('base64 encode MATECOS System');
+            addBatchRow('base64 encode OrchaDeck System');
         }
 
         async function runBatch() {

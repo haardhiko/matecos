@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "matecos"
+name = "orchadeck"
 version = "0.1.0"
-description = "Multi-Agent Tool Ecosystem — dynamic orchestration of specialized agents"
+description = "OrchaDeck — Multi-Agent Tool Ecosystem and Dynamic Orchestration Platform"
 requires-python = ">=3.12"
 dependencies = [
     # Web framework

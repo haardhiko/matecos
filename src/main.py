@@ -112,9 +112,9 @@ def create_app() -> FastAPI:
     settings = get_settings()
 
     app = FastAPI(
-        title="MATECOS — Multi-Agent Tool Ecosystem",
+        title="OrchaDeck — Multi-Agent Tool Ecosystem",
         description=(
-            "Production-oriented dynamic multi-agent tool ecosystem. "
+            "Production-oriented dynamic multi-agent tool ecosystem and orchestration platform. "
             "Accepts natural-language requests, decomposes them into task graphs, "
             "dynamically spawns specialised agents, and returns verified results."
         ),

@@ -109,7 +109,7 @@ async def _exec(tool_id: str, payload: dict[str, Any]) -> str:
 
 
 # --- Initialize MCPServer ---
-mcp_app = MCPServer("matecos")
+mcp_app = MCPServer("orchadeck")
 
 
 # 1. Calculator
@@ -208,8 +208,9 @@ async def data_convert_units(value: float, from_unit: str, to_unit: str) -> str:
 
 
 # 16. Universal Tool Invoker
-@mcp_app.tool(name="matecos_execute_tool", description="Execute any MATECOS tool by tool_id with arbitrary JSON parameters.")
-async def matecos_execute_tool(tool_id: str, parameters_json: str = "{}") -> str:
+@mcp_app.tool(name="orchadeck_execute_tool", description="Execute any OrchaDeck tool by tool_id with arbitrary JSON parameters.")
+@mcp_app.tool(name="matecos_execute_tool", description="Execute any OrchaDeck tool by tool_id with arbitrary JSON parameters.")
+async def orchadeck_execute_tool(tool_id: str, parameters_json: str = "{}") -> str:
     try:
         payload = json.loads(parameters_json)
     except json.JSONDecodeError as err:
@@ -217,9 +218,10 @@ async def matecos_execute_tool(tool_id: str, parameters_json: str = "{}") -> str
     return await _exec(tool_id, payload)
 
 
-# 17. List All Available MATECOS Tools
-@mcp_app.tool(name="matecos_list_tools", description="List all registered MATECOS tools with their capabilities and risk levels.")
-def matecos_list_tools() -> str:
+# 17. List All Available OrchaDeck Tools
+@mcp_app.tool(name="orchadeck_list_tools", description="List all registered OrchaDeck tools with their capabilities and risk levels.")
+@mcp_app.tool(name="matecos_list_tools", description="List all registered OrchaDeck tools with their capabilities and risk levels.")
+def orchadeck_list_tools() -> str:
     tools_info = []
     for r in registry.list_all():
         m = r.manifest
@@ -234,8 +236,9 @@ def matecos_list_tools() -> str:
 
 
 # 18. GitHub Repository Tool Importer
-@mcp_app.tool(name="matecos_import_github_repo", description="Clone and import tools from a GitHub repository URL into MATECOS.")
-async def matecos_import_github_repo(repo_url: str, branch: str = "main") -> str:
+@mcp_app.tool(name="orchadeck_import_github_repo", description="Clone and import tools from a GitHub repository URL into OrchaDeck.")
+@mcp_app.tool(name="matecos_import_github_repo", description="Clone and import tools from a GitHub repository URL into OrchaDeck.")
+async def orchadeck_import_github_repo(repo_url: str, branch: str = "main") -> str:
     import httpx
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
