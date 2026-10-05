@@ -193,26 +193,34 @@ async def import_repo(request: ImportRequest) -> dict:
         # Helper to create runnable python script handlers
         def _make_script_handler(s_path: Path):
             async def _handler(payload: dict, context: ToolExecutionContext) -> dict:
-                import sys, asyncio
+                import sys, subprocess, asyncio
                 args = payload.get("args", [])
                 if isinstance(args, str):
                     args = [args]
                 elif not isinstance(args, list):
                     args = [str(args)]
-                try:
-                    proc = await asyncio.create_subprocess_exec(
-                        sys.executable, str(s_path), *[str(a) for a in args],
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE,
-                        cwd=str(s_path.parent)
+                
+                cmd = [sys.executable, str(s_path), *[str(a) for a in args]]
+
+                def _run_script() -> subprocess.CompletedProcess[str]:
+                    return subprocess.run(
+                        cmd,
+                        capture_output=True,
+                        text=True,
+                        cwd=str(s_path.parent),
+                        timeout=30.0,
                     )
-                    stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30.0)
+
+                try:
+                    proc = await asyncio.to_thread(_run_script)
                     return {
-                        "stdout": stdout.decode(errors="replace")[:4000],
-                        "stderr": stderr.decode(errors="replace")[:2000],
+                        "stdout": proc.stdout[:4000],
+                        "stderr": proc.stderr[:2000],
                         "exit_code": proc.returncode,
                         "script": s_path.name
                     }
+                except subprocess.TimeoutExpired:
+                    return {"error": "Execution timed out after 30 seconds", "script": s_path.name}
                 except Exception as e:
                     return {"error": str(e), "script": s_path.name}
             return _handler
@@ -341,11 +349,14 @@ async def import_repo(request: ImportRequest) -> dict:
             "total_files": index_result.total_files,
         }
 
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception("github.import_failed", url=request.url)
+        err_msg = str(exc).strip() or type(exc).__name__
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Import failed: {exc}",
+            detail=f"Import failed: {err_msg}",
         ) from exc
 
 

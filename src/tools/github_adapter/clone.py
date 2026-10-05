@@ -15,6 +15,30 @@ import structlog
 logger = structlog.get_logger(__name__)
 
 
+def _remove_readonly(func, path, exc_info):
+    import os, stat
+    try:
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+    except Exception:
+        pass
+
+
+def _safe_rmtree(path: Path) -> None:
+    if not path.exists():
+        return
+    try:
+        shutil.rmtree(path, onerror=_remove_readonly)
+    except Exception:
+        pass
+    if path.exists():
+        try:
+            import subprocess
+            subprocess.run(["cmd", "/c", "rd", "/s", "/q", str(path)], capture_output=True)
+        except Exception:
+            pass
+
+
 class CloneError(Exception):
     """Raised when repository cloning fails."""
 
@@ -67,35 +91,37 @@ class RepositoryCloner:
                 self._log.info("clone.already_exists", repo=repo_name)
                 return dest
             else:
-                shutil.rmtree(dest, ignore_errors=True)
+                _safe_rmtree(dest)
 
         self._log.info("clone.starting", repo_url=repo_url, ref=ref)
 
-        # First attempt: if ref is specified and not empty, try with --branch
-        # If that fails (e.g. branch main doesn't exist, but master does), retry without --branch
         attempts = []
         if ref and ref.lower() not in ["head", "default", ""]:
             attempts.append(["git", "clone", "--depth", str(depth), "--branch", ref, repo_url, str(dest)])
         attempts.append(["git", "clone", "--depth", str(depth), repo_url, str(dest)])
 
+        import subprocess
+
+        def _run_git(command: list[str]) -> subprocess.CompletedProcess[bytes]:
+            return subprocess.run(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+
         last_error = ""
         for cmd in attempts:
-            if dest.exists():
-                shutil.rmtree(dest, ignore_errors=True)
+            _safe_rmtree(dest)
             try:
-                process = await asyncio.create_subprocess_exec(
-                    *cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                stdout, stderr = await process.communicate()
-
-                if process.returncode == 0:
+                proc = await asyncio.to_thread(_run_git, cmd)
+                if proc.returncode == 0:
                     self._cloned[repo_url] = dest
                     self._log.info("clone.complete", repo=repo_name, path=str(dest))
                     return dest
                 else:
-                    last_error = stderr.decode(errors="replace")[:500]
+                    err_text = proc.stderr.decode(errors="replace").strip()
+                    out_text = proc.stdout.decode(errors="replace").strip()
+                    last_error = err_text or out_text or f"Process exited with code {proc.returncode}"
                     self._log.warning("clone.attempt_failed", cmd=cmd, error=last_error)
             except FileNotFoundError:
                 raise CloneError("git is not installed or not on PATH.") from None
