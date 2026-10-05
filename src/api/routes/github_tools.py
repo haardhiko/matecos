@@ -225,26 +225,109 @@ async def import_repo(request: ImportRequest) -> dict:
                     return {"error": str(e), "script": s_path.name}
             return _handler
 
-        # Scan for additional Python scripts that look like tools
-        py_files = list(repo_dir.rglob("*.py"))
-        _tool_patterns = re.compile(
-            r"def\s+(main|run|handler|execute|process|cli)\s*\(|if\s+__name__\s*==\s*['\"]__main__['\"]", re.IGNORECASE
-        )
+        # Scan for declared entry points and tools
+        repo_slug = re.sub(r"[^a-zA-Z0-9_]", "_", repo_name.lower())
         tool_script_map: dict[str, Path] = {}
 
-        for py_file in py_files[:50]:  # safety cap
+        # 1. Parse pyproject.toml for console scripts ([project.scripts] or [tool.poetry.scripts])
+        pyproject_path = repo_dir / "pyproject.toml"
+        if pyproject_path.exists():
+            try:
+                import tomllib
+                pyproj_data = tomllib.loads(pyproject_path.read_text(encoding="utf-8", errors="ignore"))
+                scripts = pyproj_data.get("project", {}).get("scripts", {})
+                if not scripts:
+                    scripts = pyproj_data.get("tool", {}).get("poetry", {}).get("scripts", {})
+                for script_name, target in scripts.items():
+                    s_name = re.sub(r"[^a-zA-Z0-9_]", "_", script_name)
+                    tid = f"github.{repo_slug}.{s_name}"
+                    m = ToolManifest(
+                        tool_id=tid,
+                        name=f"{repo_name}: {s_name}",
+                        version="0.1.0",
+                        description=f"CLI tool '{script_name}' -> {target}. {description[:150]}",
+                        capabilities=[f"{repo_slug}.{s_name}", "cli"] + extra_caps,
+                        input_schema={
+                            "type": "object",
+                            "properties": {
+                                "args": {"type": "array", "items": {"type": "string"}, "description": "Command line arguments"}
+                            },
+                        },
+                        output_schema={
+                            "type": "object",
+                            "properties": {
+                                "stdout": {"type": "string"},
+                                "stderr": {"type": "string"},
+                                "exit_code": {"type": "integer"},
+                            },
+                        },
+                        risk_level="medium",
+                        runtime=RuntimeConfig(type="builtin"),
+                        owner="github",
+                        source_repo=clean_url,
+                    )
+                    manifests.append(m)
+            except Exception:
+                pass
+
+        # 2. Parse package.json for Node.js bin / scripts
+        package_json_path = repo_dir / "package.json"
+        if package_json_path.exists():
+            try:
+                import json as _json
+                pkg_data = _json.loads(package_json_path.read_text(encoding="utf-8", errors="ignore"))
+                bin_data = pkg_data.get("bin", {})
+                if isinstance(bin_data, str):
+                    bin_data = {repo_name: bin_data}
+                for bin_name, bin_file in bin_data.items():
+                    b_name = re.sub(r"[^a-zA-Z0-9_]", "_", bin_name)
+                    tid = f"github.{repo_slug}.{b_name}"
+                    m = ToolManifest(
+                        tool_id=tid,
+                        name=f"{repo_name}: {bin_name}",
+                        version="0.1.0",
+                        description=f"Node.js binary '{bin_name}'. {description[:150]}",
+                        capabilities=[f"{repo_slug}.{b_name}", "nodejs", "cli"],
+                        input_schema={"type": "object", "properties": {"args": {"type": "array", "items": {"type": "string"}}}},
+                        output_schema={"type": "object", "properties": {"stdout": {"type": "string"}, "exit_code": {"type": "integer"}}},
+                        risk_level="medium",
+                        runtime=RuntimeConfig(type="builtin"),
+                        owner="github",
+                        source_repo=clean_url,
+                    )
+                    manifests.append(m)
+            except Exception:
+                pass
+
+        # 3. Scan for Python scripts that look like tools
+        py_files = list(repo_dir.rglob("*.py"))
+        # Filter out tests and internal build directories
+        non_test_py = [
+            f for f in py_files
+            if not any(part in f.parts for part in ["tests", "test", "testing", "spec", "docs", "build", ".venv", "venv", ".git"])
+            and not f.name.startswith("test_")
+            and not f.name.endswith("_test.py")
+        ]
+        # Candidates list: prefer non-test files first, then all files
+        candidates = non_test_py if non_test_py else py_files
+        _tool_patterns = re.compile(
+            r"def\s+(main|run|handler|execute|process|cli|start|serve)\s*\(|if\s+__name__\s*==\s*['\"]__main__['\"]|click\.command|argparse\.ArgumentParser",
+            re.IGNORECASE,
+        )
+
+        for py_file in candidates[:60]:
             try:
                 content = py_file.read_text(encoding="utf-8", errors="ignore")
                 if _tool_patterns.search(content):
                     name = re.sub(r"[^a-zA-Z0-9_]", "_", py_file.stem)
-                    tid = f"github.python.{name}"
+                    tid = f"github.{repo_slug}.{name}"
                     if not any(m.tool_id == tid for m in manifests):
                         m = ToolManifest(
                             tool_id=tid,
-                            name=f"Python: {name}",
+                            name=f"{repo_name}: {name}",
                             version="0.1.0",
-                            description=description[:200],
-                            capabilities=[f"python.{name}"] + extra_caps,
+                            description=f"Tool script from {py_file.name}. {description[:150]}",
+                            capabilities=[f"{repo_slug}.{name}"] + extra_caps,
                             input_schema={
                                 "type": "object",
                                 "properties": {
@@ -258,6 +341,7 @@ async def import_repo(request: ImportRequest) -> dict:
                                 "type": "object",
                                 "properties": {
                                     "stdout": {"type": "string"},
+                                    "stderr": {"type": "string"},
                                     "exit_code": {"type": "integer"},
                                 },
                             },
@@ -271,17 +355,17 @@ async def import_repo(request: ImportRequest) -> dict:
             except OSError:
                 continue
 
-        # If still no tools discovered, register top-level python file as fallback tool
+        # 4. If still no tools discovered, register entry point or primary script
         if not manifests and py_files:
-            fallback_py = py_files[0]
+            fallback_py = candidates[0] if candidates else py_files[0]
             name = re.sub(r"[^a-zA-Z0-9_]", "_", fallback_py.stem)
-            tid = f"github.python.{name}"
+            tid = f"github.{repo_slug}.{name}"
             m = ToolManifest(
                 tool_id=tid,
-                name=f"Python: {name}",
+                name=f"{repo_name}: {name}",
                 version="0.1.0",
-                description=description[:200],
-                capabilities=[f"python.{name}", "python"],
+                description=f"Module tool from {fallback_py.name}. {description[:150]}",
+                capabilities=[f"{repo_slug}.{name}", "python"],
                 input_schema={
                     "type": "object",
                     "properties": {
@@ -292,6 +376,7 @@ async def import_repo(request: ImportRequest) -> dict:
                     "type": "object",
                     "properties": {
                         "stdout": {"type": "string"},
+                        "stderr": {"type": "string"},
                         "exit_code": {"type": "integer"},
                     },
                 },

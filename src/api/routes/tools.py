@@ -17,11 +17,17 @@ logger: structlog.BoundLogger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/v1/tools", tags=["Tools"])
 
-# ---------------------------------------------------------------------------
-# In-process tool registry stub (replaced by DB-backed store when wired)
-# ---------------------------------------------------------------------------
+def _get_shared_registry():
+    """Return the shared ToolRegistry populated by github_tools (all 15 builtins + GitHub imports).
+
+    Lazy import avoids circular dependency at module load time.
+    """
+    from src.api.routes.github_tools import get_registry  # noqa: PLC0415
+    return get_registry()
+
 
 _TOOL_STORE: dict[str, ToolRecord] = {}  # tool_id -> ToolRecord
+
 
 
 def _problem(
@@ -73,6 +79,100 @@ def _risk_within_max(tool_risk: str, max_risk: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Converter: internal ToolManifest → API ToolRecord schema
+# ---------------------------------------------------------------------------
+
+import ulid as _ulid  # noqa: E402
+from datetime import UTC as _UTC, datetime as _dt  # noqa: E402
+
+
+def _manifest_to_record(rec) -> ToolRecord:
+    """Convert an internal registry ToolRecord to the API ToolRecord schema."""
+    m = rec.manifest
+    now = rec.registered_at
+
+    runtime_type = "builtin"
+    runtime_image = None
+    if hasattr(m, "runtime") and m.runtime:
+        runtime_type = m.runtime.type
+        runtime_image = getattr(m.runtime, "image", None)
+
+    from src.api.schemas.tools import ToolLimits  # noqa: PLC0415
+    limits_data = {"timeout_seconds": 120, "max_memory_mb": 512,
+                   "max_output_kb": 1024, "max_retries": 3, "cost_estimate_usd": 0.001}
+    if hasattr(m, "resource_limits") and m.resource_limits:
+        rl = m.resource_limits
+        limits_data = {
+            "timeout_seconds": getattr(rl, "timeout_seconds", 120),
+            "max_memory_mb": getattr(rl, "max_memory_mb", 512),
+            "max_output_kb": getattr(rl, "max_output_kb", 1024),
+            "max_retries": getattr(rl, "max_retries", 3),
+            "cost_estimate_usd": getattr(rl, "cost_estimate_usd", 0.001),
+        }
+    limits = ToolLimits(**limits_data)
+
+    side_effects = "none"
+    if hasattr(m, "side_effects") and m.side_effects:
+        se = m.side_effects
+        side_effects = se.value if hasattr(se, "value") else str(se)
+
+    health = rec.health_status if rec.health_status in ("healthy", "degraded", "unhealthy", "unknown") else "unknown"
+
+    return ToolRecord(
+        id=_ulid.new().str,
+        tool_id=m.tool_id,
+        name=m.name,
+        version=m.version,
+        description=m.description,
+        capabilities=list(m.capabilities),
+        input_schema=dict(m.input_schema),
+        output_schema=dict(m.output_schema),
+        risk_level=m.risk_level,
+        side_effects=side_effects,
+        permissions=[],
+        runtime_type=runtime_type,
+        runtime_image=runtime_image,
+        limits=limits,
+        auth_required=False,
+        source_repo=getattr(m, "source_repo", None),
+        source_commit=getattr(m, "source_commit", None),
+        owner=getattr(m, "owner", "matecos"),
+        health_check_url=None,
+        metadata={},
+        registered_at=now,
+        updated_at=now,
+        health_status=health,
+        success_rate_7d=None,
+        avg_latency_ms=rec.avg_latency_ms if rec.avg_latency_ms else None,
+        is_available=rec.enabled,
+    )
+
+
+def _all_tools_as_records() -> list[ToolRecord]:
+    """Return all tools from the shared registry and _TOOL_STORE as API ToolRecord objects."""
+    seen: set[str] = set()
+    result: list[ToolRecord] = []
+
+    # 1. Custom stored tools
+    for tool_id, rec in _TOOL_STORE.items():
+        if "@" not in tool_id and tool_id not in seen:
+            seen.add(tool_id)
+            result.append(rec)
+
+    # 2. Shared registry tools (15 builtins + GitHub imports)
+    registry = _get_shared_registry()
+    for rec in registry.list_all():
+        if rec.tool_id not in seen:
+            seen.add(rec.tool_id)
+            try:
+                result.append(_manifest_to_record(rec))
+            except Exception:
+                pass
+
+    return result
+
+
+# ---------------------------------------------------------------------------
 # GET /v1/tools
 # ---------------------------------------------------------------------------
 
@@ -100,7 +200,7 @@ async def list_tools(
         :class:`~src.api.schemas.tools.ToolRecord` items.
     """
     log = logger.bind(user_id=user["id"])
-    tools = list(_TOOL_STORE.values())
+    tools = _all_tools_as_records()
 
     # Capability filter — tool must declare ALL requested capabilities
     if query.capabilities:
@@ -168,15 +268,26 @@ async def get_tool(
         HTTPException: 404 when ``tool_id`` is not registered.
     """
     tool = _TOOL_STORE.get(tool_id)
-    if tool is None:
-        raise _problem(
-            status_code=status.HTTP_404_NOT_FOUND,
-            title="Tool Not Found",
-            detail=f"No tool registered with id '{tool_id}'.",
-            instance=f"/v1/tools/{tool_id}",
-        )
-    logger.debug("tools.get", tool_id=tool_id, user_id=user["id"])
-    return tool
+    if tool is not None:
+        logger.debug("tools.get", tool_id=tool_id, user_id=user["id"])
+        return tool
+
+    registry = _get_shared_registry()
+    rec = registry.get(tool_id)
+    if rec is not None:
+        try:
+            record = _manifest_to_record(rec)
+            logger.debug("tools.get", tool_id=tool_id, user_id=user["id"])
+            return record
+        except Exception:
+            pass
+
+    raise _problem(
+        status_code=status.HTTP_404_NOT_FOUND,
+        title="Tool Not Found",
+        detail=f"No tool registered with id '{tool_id}'.",
+        instance=f"/v1/tools/{tool_id}",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -325,20 +436,32 @@ async def get_tool_health(
         HTTPException: 404 when the tool is not registered.
     """
     tool = _TOOL_STORE.get(tool_id)
-    if tool is None:
-        raise _problem(
-            status_code=status.HTTP_404_NOT_FOUND,
-            title="Tool Not Found",
-            detail=f"No tool registered with id '{tool_id}'.",
-            instance=f"/v1/tools/{tool_id}/health",
+    if tool is not None:
+        logger.debug("tools.health_check", tool_id=tool_id, user_id=user["id"])
+        return HealthStatus(
+            tool_id=tool_id,
+            status=tool.health_status,
+            last_check=tool.updated_at,
+            latency_ms=tool.avg_latency_ms,
+            error=None if tool.health_status == "healthy" else "Tool reported non-healthy status",
         )
 
-    logger.debug("tools.health_check", tool_id=tool_id, user_id=user["id"])
+    registry = _get_shared_registry()
+    rec = registry.get(tool_id)
+    if rec is not None:
+        health = rec.health_status if rec.health_status in ("healthy", "degraded", "unhealthy", "unknown") else "healthy"
+        logger.debug("tools.health_check", tool_id=tool_id, user_id=user["id"])
+        return HealthStatus(
+            tool_id=tool_id,
+            status=health,
+            last_check=rec.registered_at,
+            latency_ms=rec.avg_latency_ms if rec.avg_latency_ms else None,
+            error=None if health == "healthy" else "Tool reported non-healthy status",
+        )
 
-    return HealthStatus(
-        tool_id=tool_id,
-        status=tool.health_status,
-        last_check=tool.updated_at,
-        latency_ms=tool.avg_latency_ms,
-        error=None if tool.health_status == "healthy" else "Tool reported non-healthy status",
+    raise _problem(
+        status_code=status.HTTP_404_NOT_FOUND,
+        title="Tool Not Found",
+        detail=f"No tool registered with id '{tool_id}'.",
+        instance=f"/v1/tools/{tool_id}/health",
     )
