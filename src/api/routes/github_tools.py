@@ -148,10 +148,13 @@ async def import_repo(request: ImportRequest) -> dict:
     )
 
     if report.status == "failed" and not report.tools_registered:
-        first_err = report.errors[0]["error"] if report.errors else "No tools could be discovered or registered."
+        first_err_dict = report.errors[0] if report.errors else {}
+        first_err = first_err_dict.get("error", "No tools could be discovered or registered.")
+        err_type = first_err_dict.get("error_type")
+        prefix = f"[{err_type}] " if err_type else ""
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Import failed: {first_err}",
+            detail=f"Import failed: {prefix}{first_err}",
         )
 
     # Store metadata for /repos endpoint

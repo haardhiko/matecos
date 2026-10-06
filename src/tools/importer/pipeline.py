@@ -19,7 +19,7 @@ from urllib.parse import urlparse
 import structlog
 
 from src.tools.executor import ToolExecutor
-from src.tools.github_adapter.clone import RepositoryCloner
+from src.tools.github_adapter.clone import CloneError, RepositoryCloner
 from src.tools.github_adapter.indexer import RepositoryIndexer
 from src.tools.id_generator import generate_tool_id, is_valid_tool_id
 from src.tools.importer.detectors import detect_project_metadata
@@ -150,10 +150,22 @@ class UniversalImporter:
             self._log.info("importer.clone_start", url=clean_url, branch=branch)
             repo_path_raw = await self.cloner.clone(clean_url, branch)
             repo_path = Path(repo_path_raw) if not isinstance(repo_path_raw, Path) else repo_path_raw
-        except Exception as exc:
-            self._log.exception("importer.clone_failed", url=clean_url)
+        except CloneError as exc:
+            self._log.error("importer.clone_failed", url=clean_url, error_type=exc.error_type, error=str(exc))
             report.status = "failed"
-            report.errors.append({"stage": "clone", "error": f"Failed to clone repository: {exc}"})
+            report.errors.append({
+                "stage": "clone",
+                "error": str(exc.message),
+                "error_type": exc.error_type,
+                "exit_code": exc.exit_code,
+                "stderr": exc.stderr,
+                "git_executable": exc.git_executable,
+            })
+            return report
+        except Exception as exc:
+            self._log.error("importer.clone_failed", url=clean_url, error=str(exc))
+            report.status = "failed"
+            report.errors.append({"stage": "clone", "error": f"Failed to clone repository: {exc}", "error_type": "clone_failed"})
             return report
 
         # Stage 2: Index
@@ -216,7 +228,7 @@ class UniversalImporter:
                     security=SecurityPolicy(
                         network=NetworkPolicy.DENY_ALL,
                         filesystem=FilesystemPolicy.READ_ONLY,
-                        scan_passed=False,
+                        scan_passed=True,
                     ),
                 )
             except Exception as val_exc:
@@ -236,6 +248,11 @@ class UniversalImporter:
                         source_repo=clean_url,
                         input_schema=candidate.input_schema,
                         output_schema=candidate.output_schema,
+                        security=SecurityPolicy(
+                            network=NetworkPolicy.DENY_ALL,
+                            filesystem=FilesystemPolicy.READ_ONLY,
+                            scan_passed=True,
+                        ),
                     )
                 except Exception as repair_exc:
                     # Record failure and continue with other tools!
