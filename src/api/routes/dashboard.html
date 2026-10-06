@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --bg-color: #09090b;
@@ -802,6 +803,27 @@
                 <span id="page-breadcrumb" style="color: var(--text-muted); font-size: 13px;">Platform / Overview</span>
             </div>
             <div style="display: flex; gap: 12px; align-items: center;">
+                <!-- Supabase Auth State Widget -->
+                <div id="auth-widget" style="display: flex; align-items: center; gap: 10px;">
+                    <div id="auth-loading" style="font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+                        <i data-lucide="loader" class="spin" style="width: 14px;"></i> Authenticating...
+                    </div>
+                    <div id="auth-unauthenticated" style="display: none; display: flex; align-items: center; gap: 8px;">
+                        <button class="btn btn-secondary btn-sm" onclick="loginWithGitHub()" id="btn-login-github" style="display: inline-flex; align-items: center; gap: 6px;">
+                            <i data-lucide="github" style="width: 14px;"></i> Sign in with GitHub
+                        </button>
+                    </div>
+                    <div id="auth-authenticated" style="display: none; align-items: center; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 8px; background: var(--surface); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);">
+                            <img id="user-avatar" src="" style="width: 22px; height: 22px; border-radius: 50%; display: none; object-fit: cover;" alt="avatar">
+                            <span id="user-display-name" style="font-size: 12px; font-weight: 600; color: var(--text-main);">User</span>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="logoutSupabase()" title="Sign Out" style="padding: 6px 10px;">
+                            <i data-lucide="log-out" style="width: 14px;"></i> Logout
+                        </button>
+                    </div>
+                </div>
+
                 <a href="/docs" target="_blank" class="btn btn-secondary btn-sm">
                     <i data-lucide="external-link"></i> OpenAPI Docs
                 </a>
@@ -1429,10 +1451,158 @@
         lucide.createIcons();
 
         const API_BASE = (window.location.protocol.startsWith('http') && window.location.origin !== 'null') ? '/v1' : 'http://localhost:8000/v1';
+        
+        // Supabase configuration injected from backend settings or window location
+        const SUPABASE_URL = "{{SUPABASE_URL}}".trim();
+        const SUPABASE_ANON_KEY = "{{SUPABASE_ANON_KEY}}".trim();
+
+        let supabaseClient = null;
+        let currentUserSession = null;
+
         const HEADERS = {
             'Authorization': 'Bearer dev-test-token',
             'Content-Type': 'application/json'
         };
+
+        function setAuthToken(token) {
+            if (token) {
+                HEADERS['Authorization'] = `Bearer ${token}`;
+            } else {
+                HEADERS['Authorization'] = 'Bearer dev-test-token';
+            }
+        }
+
+        // Initialize Supabase Client
+        if (SUPABASE_URL && SUPABASE_ANON_KEY && !SUPABASE_URL.startsWith('{{') && window.supabase) {
+            try {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            } catch (err) {
+                console.error("Failed to initialize Supabase client:", err);
+            }
+        }
+
+        function updateAuthUI(session) {
+            currentUserSession = session;
+            const loadingEl = document.getElementById('auth-loading');
+            const unauthEl = document.getElementById('auth-unauthenticated');
+            const authEl = document.getElementById('auth-authenticated');
+
+            if (!loadingEl || !unauthEl || !authEl) return;
+
+            loadingEl.style.display = 'none';
+
+            if (session && session.user) {
+                setAuthToken(session.access_token);
+                unauthEl.style.display = 'none';
+                authEl.style.display = 'flex';
+
+                const user = session.user;
+                const meta = user.user_metadata || {};
+                const name = meta.full_name || meta.user_name || meta.name || user.email || 'GitHub User';
+                const avatar = meta.avatar_url;
+
+                const nameEl = document.getElementById('user-display-name');
+                if (nameEl) nameEl.innerText = name;
+
+                const avatarEl = document.getElementById('user-avatar');
+                if (avatarEl) {
+                    if (avatar) {
+                        avatarEl.src = avatar;
+                        avatarEl.style.display = 'inline-block';
+                    } else {
+                        avatarEl.style.display = 'none';
+                    }
+                }
+            } else {
+                setAuthToken(null);
+                authEl.style.display = 'none';
+                unauthEl.style.display = 'flex';
+            }
+            lucide.createIcons();
+        }
+
+        async function initAuth() {
+            if (!supabaseClient) {
+                // No Supabase credentials configured; running in standalone dev mode
+                updateAuthUI(null);
+                const unauthEl = document.getElementById('auth-unauthenticated');
+                if (unauthEl) {
+                    unauthEl.innerHTML = `
+                        <button class="btn btn-secondary btn-sm" onclick="showDevAuthModal()" title="Supabase configuration status">
+                            <i data-lucide="shield-check" style="width: 14px; color: var(--success);"></i> Dev Mode Active
+                        </button>
+                    `;
+                }
+                lucide.createIcons();
+                return;
+            }
+
+            try {
+                // Get initial session
+                const { data: { session }, error } = await supabaseClient.auth.getSession();
+                if (error) {
+                    console.warn("Supabase getSession error:", error);
+                    updateAuthUI(null);
+                } else {
+                    updateAuthUI(session);
+                }
+
+                // Listen for auth state changes
+                supabaseClient.auth.onAuthStateChange((event, newSession) => {
+                    console.log("Supabase Auth State Change:", event);
+                    updateAuthUI(newSession);
+                    if (event === 'SIGNED_IN') {
+                        showToast('Signed in successfully with GitHub', 'success');
+                        loadRepos();
+                        loadCatalog();
+                    } else if (event === 'SIGNED_OUT') {
+                        showToast('Signed out', 'info');
+                        loadRepos();
+                        loadCatalog();
+                    }
+                });
+            } catch (err) {
+                console.error("Auth initialization error:", err);
+                updateAuthUI(null);
+            }
+        }
+
+        async function loginWithGitHub() {
+            if (!supabaseClient) {
+                alert("Supabase is not configured yet. Please configure SUPABASE_URL and SUPABASE_ANON_KEY in your .env file or Supabase dashboard.");
+                return;
+            }
+            const btn = document.getElementById('btn-login-github');
+            if (btn) btn.innerHTML = '<i data-lucide="loader" class="spin" style="width: 14px;"></i> Connecting...';
+            try {
+                const { error } = await supabaseClient.auth.signInWithOAuth({
+                    provider: 'github',
+                    options: {
+                        redirectTo: window.location.origin + window.location.pathname,
+                    }
+                });
+                if (error) throw error;
+            } catch (err) {
+                showToast(err.message || 'GitHub OAuth failed', 'error');
+                if (btn) btn.innerHTML = '<i data-lucide="github" style="width: 14px;"></i> Sign in with GitHub';
+                lucide.createIcons();
+            }
+        }
+
+        async function logoutSupabase() {
+            if (supabaseClient) {
+                try {
+                    await supabaseClient.auth.signOut();
+                } catch (err) {
+                    console.error("Error signing out:", err);
+                }
+            }
+            updateAuthUI(null);
+        }
+
+        function showDevAuthModal() {
+            showToast('Running with local database and dev authentication tokens. Add SUPABASE_URL & SUPABASE_ANON_KEY for GitHub OAuth.', 'info');
+        }
 
         // Navigation
         function navTo(target) {
@@ -2652,6 +2822,7 @@ func main() {
         }
 
         // Initial setup
+        initAuth();
         loadDashboard();
         loadBatchPreset();
         loadConversations();

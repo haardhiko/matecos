@@ -20,7 +20,7 @@ class DatabaseSettings(BaseSettings):
 
 class RedisSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="REDIS_", extra="ignore")
-    url: str = "redis://localhost:6379/0"
+    url: str | None = None
     max_connections: int = 50
 
 
@@ -84,6 +84,14 @@ class MemorySettings(BaseSettings):
     event_store_archive_days: int = 365
 
 
+class SupabaseSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="SUPABASE_", extra="ignore")
+    url: str = ""
+    anon_key: str = ""
+    service_role_key: str = ""
+    jwt_secret: str = ""
+
+
 class AppSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -106,6 +114,7 @@ class AppSettings(BaseSettings):
     # Sub-settings (nested, loaded from env via sub-model prefixes)
     db: DatabaseSettings = Field(default_factory=DatabaseSettings)
     redis: RedisSettings = Field(default_factory=RedisSettings)
+    supabase: SupabaseSettings = Field(default_factory=SupabaseSettings)
     llm: LLMSettings = Field(default_factory=LLMSettings)
     sandbox: SandboxSettings = Field(default_factory=SandboxSettings)
     security: SecuritySettings = Field(default_factory=SecuritySettings)

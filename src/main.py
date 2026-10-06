@@ -53,13 +53,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # 2. Database
     try:
-        from src.infrastructure.database import create_engine
+        from src.infrastructure.database import init_db_engine
 
-        create_engine(settings)
+        init_db_engine(settings)
     except Exception:
         logger.exception("app.startup.database_failed")
 
-    # 3. Queue (Redis Streams)
+    # 3. Queue (Redis Streams or In-Memory fallback)
     queue_manager = None
     try:
         from src.infrastructure.queue import QueueManager
@@ -73,16 +73,39 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception:
         logger.exception("app.startup.queue_failed")
 
-    # 4. Lock manager
+    # 4. Lock manager (Redis or In-Memory fallback)
     lock_manager = None
     try:
         from src.infrastructure.locks import LockManager
 
-        lock_manager = LockManager(redis_url=settings.redis.url)
+        lock_manager = LockManager(
+            redis_url=settings.redis.url,
+            max_connections=10,
+        )
         await lock_manager.connect()
         app.state.lock_manager = lock_manager
     except Exception:
         logger.exception("app.startup.lock_manager_failed")
+
+    # 5. Shared Redis client for rate limiter / memory (only if Redis URL is configured)
+    redis_client = None
+    if settings.redis.url:
+        try:
+            import redis.asyncio as aioredis
+
+            redis_client = aioredis.from_url(
+                settings.redis.url,
+                max_connections=settings.redis.max_connections,
+                decode_responses=True,
+            )
+            app.state.redis = redis_client
+            logger.info("app.startup.redis_connected", url=settings.redis.url)
+        except Exception:
+            logger.exception("app.startup.redis_connection_failed")
+            app.state.redis = None
+    else:
+        app.state.redis = None
+        logger.info("app.startup.redis_not_configured_running_in_memory")
 
     logger.info("app.startup.complete")
 
@@ -91,6 +114,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # --- Shutdown ---
     logger.info("app.shutdown")
 
+    if redis_client:
+        try:
+            await redis_client.aclose()
+        except Exception:
+            logger.exception("app.shutdown.redis_close_failed")
     if lock_manager:
         await lock_manager.close()
     if queue_manager:

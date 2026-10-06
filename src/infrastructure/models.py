@@ -14,6 +14,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    JSON,
     String,
     Text,
     func,
@@ -22,6 +23,9 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.infrastructure.database import Base
+
+# Universal JSON type that renders as JSONB on Postgres/Supabase and JSON on SQLite
+CompatibleJSON = JSON().with_variant(JSONB, "postgresql")
 
 # ── Enums ─────────────────────────────────────────────────────────────────────
 
@@ -482,3 +486,152 @@ class WorkingMemorySnapshot(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+# ==============================================================================
+# Supabase Persistent Storage Models (User Isolation, Repos, Imports, Tools)
+# ==============================================================================
+
+
+class UserProfile(Base):
+    """User profile record mapped to Supabase authenticated user ID."""
+
+    __tablename__ = "user_profiles"
+    __table_args__ = (
+        Index("ix_user_profiles_email", "email"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)  # Supabase user UUID
+    email: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    full_name: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    provider: Mapped[str] = mapped_column(String(64), nullable=False, default="github")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    repositories: Mapped[list[RepositoryRecord]] = relationship(
+        "RepositoryRecord", back_populates="user", cascade="all, delete-orphan"
+    )
+    tools: Mapped[list[UserToolRecord]] = relationship(
+        "UserToolRecord", back_populates="user", cascade="all, delete-orphan"
+    )
+    imports: Mapped[list[ToolImportRecord]] = relationship(
+        "ToolImportRecord", back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+class RepositoryRecord(Base):
+    """Imported GitHub repository owned by a user."""
+
+    __tablename__ = "repositories"
+    __table_args__ = (
+        Index("ix_repositories_user_id", "user_id"),
+        Index("ix_repositories_name", "name"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("user_profiles.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    url: Mapped[str] = mapped_column(String(512), nullable=False)
+    branch: Mapped[str] = mapped_column(String(128), nullable=False, default="main")
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="pending"
+    )  # pending | processing | success | partial | failed
+    total_files: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    languages: Mapped[list[str]] = mapped_column(CompatibleJSON, nullable=False, default=list)
+    frameworks: Mapped[list[str]] = mapped_column(CompatibleJSON, nullable=False, default=list)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(CompatibleJSON, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    user: Mapped[UserProfile] = relationship("UserProfile", back_populates="repositories")
+    imports: Mapped[list[ToolImportRecord]] = relationship(
+        "ToolImportRecord", back_populates="repository", cascade="all, delete-orphan"
+    )
+    tools: Mapped[list[UserToolRecord]] = relationship(
+        "UserToolRecord", back_populates="repository", cascade="all, delete-orphan"
+    )
+
+
+class ToolImportRecord(Base):
+    """Historical record of an import attempt for a repository."""
+
+    __tablename__ = "tool_imports"
+    __table_args__ = (
+        Index("ix_tool_imports_user_id", "user_id"),
+        Index("ix_tool_imports_repository_id", "repository_id"),
+        Index("ix_tool_imports_status", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("user_profiles.id", ondelete="CASCADE"), nullable=False
+    )
+    repository_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("repositories.id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False
+    )  # pending | processing | success | partial | failed
+    tools_discovered: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    tools_registered: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    tools_failed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    dependency_status: Mapped[str] = mapped_column(String(64), nullable=False, default="unknown")
+    errors: Mapped[list[dict[str, Any]]] = mapped_column(CompatibleJSON, nullable=False, default=list)
+    duration_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    user: Mapped[UserProfile] = relationship("UserProfile", back_populates="imports")
+    repository: Mapped[RepositoryRecord] = relationship("RepositoryRecord", back_populates="imports")
+
+
+class UserToolRecord(Base):
+    """Registered tool extracted from an imported repository and owned by a user."""
+
+    __tablename__ = "user_tools"
+    __table_args__ = (
+        Index("ix_user_tools_user_id", "user_id"),
+        Index("ix_user_tools_tool_id", "tool_id"),
+        Index("ix_user_tools_repository_id", "repository_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("user_profiles.id", ondelete="CASCADE"), nullable=False
+    )
+    repository_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("repositories.id", ondelete="CASCADE"), nullable=True
+    )
+    tool_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    capabilities: Mapped[list[str]] = mapped_column(CompatibleJSON, nullable=False, default=list)
+    language: Mapped[str] = mapped_column(String(64), nullable=False, default="unknown")
+    entry_point: Mapped[str] = mapped_column(String(512), nullable=False, default="")
+    invocation_method: Mapped[str] = mapped_column(String(64), nullable=False, default="builtin")
+    risk_level: Mapped[str] = mapped_column(String(16), nullable=False, default="low")
+    version: Mapped[str] = mapped_column(String(32), nullable=False, default="0.1.0")
+    source_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    manifest_json: Mapped[dict[str, Any]] = mapped_column(CompatibleJSON, nullable=False, default=dict)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    user: Mapped[UserProfile] = relationship("UserProfile", back_populates="tools")
+    repository: Mapped[RepositoryRecord | None] = relationship("RepositoryRecord", back_populates="tools")

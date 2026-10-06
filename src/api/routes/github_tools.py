@@ -9,8 +9,11 @@ from typing import Any
 from urllib.parse import urlparse
 
 import structlog
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+
+from src.api.dependencies.auth import get_current_user
+from src.infrastructure.supabase_service import SupabaseStorageService
 
 from src.tools.executor import ToolExecutor
 from src.tools.github_adapter.clone import RepositoryCloner
@@ -138,26 +141,100 @@ class ExecuteRequest(BaseModel):
 
 
 @router.post("/import")
-async def import_repo(request: ImportRequest) -> dict:
-    """Import tools from a GitHub repository URL via the Universal Importer Pipeline."""
-    report = await _importer.import_repository(
-        request.url,
-        request.branch,
-        registry=_registry,
-        executor=_executor,
-    )
+async def import_repo(
+    request: ImportRequest,
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict:
+    """Import tools from a GitHub repository URL via the Universal Importer Pipeline.
 
+    Ensures the user profile exists, creates a repository record and import run,
+    executes discovery, registers tools, and persists the full results in Supabase.
+    """
+    user_id = str(current_user["id"])
+    parsed_path = urlparse(request.url).path.rstrip("/")
+    repo_name_guess = parsed_path.split("/")[-1].removesuffix(".git") if parsed_path else "repo"
+
+    # 1. Ensure user profile in database
+    try:
+        await SupabaseStorageService.ensure_user_profile(current_user)
+    except Exception as exc:
+        logger.warning("supabase.profile_sync_failed", error=str(exc))
+
+    # 2. Record initial import state in DB
+    db_repo_id: str | None = None
+    db_import_id: str | None = None
+    try:
+        db_repo_id, db_import_id = await SupabaseStorageService.record_import_start(
+            user_id=user_id,
+            repo_name=repo_name_guess,
+            repo_url=request.url,
+            branch=request.branch,
+        )
+    except Exception as exc:
+        logger.warning("supabase.record_start_failed", error=str(exc))
+
+    # 3. Execute Universal Importer pipeline
+    try:
+        report = await _importer.import_repository(
+            request.url,
+            request.branch,
+            registry=_registry,
+            executor=_executor,
+        )
+    except Exception as exc:
+        if db_repo_id and db_import_id:
+            try:
+                await SupabaseStorageService.record_import_failed(
+                    user_id=user_id,
+                    repo_id=db_repo_id,
+                    import_id=db_import_id,
+                    error_message=str(exc),
+                )
+            except Exception:
+                pass
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Import failed: {exc}",
+        )
+
+    # 4. Handle failed import outcome
     if report.status == "failed" and not report.tools_registered:
         first_err_dict = report.errors[0] if report.errors else {}
         first_err = first_err_dict.get("error", "No tools could be discovered or registered.")
         err_type = first_err_dict.get("error_type")
         prefix = f"[{err_type}] " if err_type else ""
+
+        if db_repo_id and db_import_id:
+            try:
+                await SupabaseStorageService.record_import_failed(
+                    user_id=user_id,
+                    repo_id=db_repo_id,
+                    import_id=db_import_id,
+                    error_message=first_err,
+                    errors=report.errors,
+                )
+            except Exception as exc:
+                logger.warning("supabase.record_failed_state_error", error=str(exc))
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Import failed: {prefix}{first_err}",
         )
 
-    # Store metadata for /repos endpoint
+    # 5. Persist success/partial status & tools into Supabase
+    if db_repo_id and db_import_id:
+        try:
+            await SupabaseStorageService.record_import_complete(
+                user_id=user_id,
+                repo_id=db_repo_id,
+                import_id=db_import_id,
+                report_data=report.to_dict(),
+                registered_manifests=report.tools,
+            )
+        except Exception as exc:
+            logger.warning("supabase.record_complete_failed", error=str(exc))
+
+    # Store in memory cache for backward compatibility & local fast lookups
     _imported_repos[report.repository] = {
         "name": report.repository,
         "url": report.url,
@@ -174,7 +251,6 @@ async def import_repo(request: ImportRequest) -> dict:
         "errors": report.errors,
     }
 
-    # Structured response with backward-compatible aliases
     data = report.to_dict()
     data["repo"] = report.repository
     data["tools_found"] = report.tools_registered
@@ -182,36 +258,62 @@ async def import_repo(request: ImportRequest) -> dict:
 
 
 @router.get("/repos")
-async def list_repos() -> list[dict]:
-    """List all imported repositories."""
+async def list_repos(
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> list[dict]:
+    """List all imported repositories owned by the authenticated user."""
+    user_id = str(current_user["id"])
+    try:
+        user_repos = await SupabaseStorageService.list_user_repos(user_id)
+        if user_repos:
+            return user_repos
+    except Exception as exc:
+        logger.warning("supabase.list_repos_failed", error=str(exc))
+
+    # Fallback to local memory cache
     return list(_imported_repos.values())
 
 
 @router.delete("/repos/{repo_name}")
-async def delete_repo(repo_name: str) -> dict:
-    """Remove an imported repository and its tools."""
-    if repo_name not in _imported_repos:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Repository '{repo_name}' not found.",
-        )
+async def delete_repo(
+    repo_name: str,
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict:
+    """Remove an imported repository and its tools for the authenticated user."""
+    user_id = str(current_user["id"])
 
-    repo_info = _imported_repos.pop(repo_name)
-    # Unregister tools
-    for t in repo_info.get("tools", []):
-        _registry.unregister(t["tool_id"])
+    # 1. Delete from Supabase DB
+    repo_url = ""
+    deleted_tool_ids: list[str] = []
+    try:
+        deleted, repo_url, deleted_tool_ids = await SupabaseStorageService.delete_user_repo(user_id, repo_name)
+    except Exception as exc:
+        logger.warning("supabase.delete_repo_failed", error=str(exc))
 
-    # Cleanup cloned files
-    _cloner.cleanup(repo_info.get("url", ""))
+    # 2. Delete from in-memory cache if present
+    repo_info = _imported_repos.pop(repo_name, None)
+    if repo_info:
+        for t in repo_info.get("tools", []):
+            _registry.unregister(t["tool_id"])
+        _cloner.cleanup(repo_info.get("url", ""))
+
+    for tid in deleted_tool_ids:
+        _registry.unregister(tid)
+    if repo_url:
+        _cloner.cleanup(repo_url)
 
     return {"status": "deleted", "repo": repo_name}
 
 
 @router.get("/tools")
-async def list_tools() -> list[dict]:
-    """List ALL registered tools (builtins + github-imported)."""
+async def list_tools(
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> list[dict]:
+    """List ALL registered tools (builtins + user-specific github-imported tools)."""
+    user_id = str(current_user["id"])
     records = _registry.list_all()
-    return [
+
+    builtin_tools = [
         {
             "tool_id": r.tool_id,
             "name": r.manifest.name,
@@ -226,6 +328,29 @@ async def list_tools() -> list[dict]:
         }
         for r in records
     ]
+
+    # Query persistent tools owned by this user
+    try:
+        user_tools = await SupabaseStorageService.list_user_tools(user_id)
+        existing_tids = {t["tool_id"] for t in builtin_tools}
+        for ut in user_tools:
+            if ut["tool_id"] not in existing_tids:
+                builtin_tools.append({
+                    "tool_id": ut["tool_id"],
+                    "name": ut["name"],
+                    "description": ut["description"],
+                    "capabilities": ut["capabilities"],
+                    "risk_level": ut["risk_level"],
+                    "version": ut["version"],
+                    "runtime_type": ut["runtime_type"],
+                    "source": ut["source"],
+                    "health_status": "healthy",
+                    "invocation_count": 0,
+                })
+    except Exception as exc:
+        logger.warning("supabase.list_tools_failed", error=str(exc))
+
+    return builtin_tools
 
 
 @router.post("/tools/{tool_id}/execute")

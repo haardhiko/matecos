@@ -169,17 +169,27 @@ async def _probe_database() -> ComponentHealth:
 
 
 async def _probe_queue() -> ComponentHealth:
-    """Issue a PING to the Redis/queue backend.
+    """Issue a PING to the Redis/queue backend or verify in-memory queue.
 
     Returns:
         :class:`~src.api.schemas.common.ComponentHealth` for the queue.
     """
     start = time.monotonic()
+    from src.config import get_settings
+
+    settings = get_settings()
+    if not settings.redis.url:
+        latency_ms = (time.monotonic() - start) * 1000
+        return ComponentHealth(
+            name="queue",
+            status="healthy",
+            latency_ms=latency_ms,
+            error=None,
+        )
+
     try:
         import redis.asyncio as aioredis
-        from src.config import get_settings
 
-        settings = get_settings()
         client = aioredis.from_url(settings.redis.url, socket_connect_timeout=1.0)
         await client.ping()
         await client.aclose()

@@ -164,16 +164,25 @@ async def _write_audit_event(
         )
 
 
-async def _enqueue_execution(execution_id: str, payload: dict[str, Any]) -> None:
-    """Enqueue an execution to the orchestration queue.
+async def _enqueue_execution(
+    execution_id: str,
+    payload: dict[str, Any],
+    qm_override: Any = None,
+) -> None:
+    """Enqueue an execution request to the orchestration stream.
 
     Falls back to a log warning if the queue is not yet wired or reachable.
 
     Args:
         execution_id: The execution identifier to enqueue.
         payload: Structured orchestration payload.
+        qm_override: Optional QueueManager from app state.
     """
     try:
+        if qm_override is not None:
+            await qm_override.enqueue("orchestration", payload)
+            return
+
         from src.config import get_settings
         from src.infrastructure.queue import QueueManager
 
@@ -372,6 +381,7 @@ async def submit_request(
             "goal_text": body.text,
             "constraints": body.constraints.model_dump(),
         },
+        qm_override=getattr(request.app.state, "queue_manager", None),
     )
 
     # ------------------------------------------------------------------

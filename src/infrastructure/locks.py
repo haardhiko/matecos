@@ -121,15 +121,52 @@ async def _async_sleep(seconds: float) -> None:
     await asyncio.sleep(seconds)
 
 
-class LockManager:
-    """Factory for DistributedLock instances sharing a single Redis connection."""
+class InMemoryLock:
+    """In-memory async lock fallback when Redis is not configured."""
 
-    def __init__(self, redis_url: str, max_connections: int = 10) -> None:
+    def __init__(self, key: str) -> None:
+        self._key = key
+        self._token: str | None = None
+
+    async def acquire(self) -> str | None:
+        self._token = secrets.token_hex(16)
+        return self._token
+
+    async def release(self, token: str) -> bool:
+        if self._token == token:
+            self._token = None
+            return True
+        return False
+
+    async def extend(self, token: str, ttl_seconds: int) -> bool:
+        return self._token == token
+
+    async def __aenter__(self) -> InMemoryLock:
+        await self.acquire()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        if self._token:
+            await self.release(self._token)
+
+
+class LockManager:
+    """Factory for DistributedLock instances sharing a single Redis connection (or in-memory fallback)."""
+
+    def __init__(self, redis_url: str | None = None, max_connections: int = 10) -> None:
         self._url = redis_url
         self._max_connections = max_connections
         self._client: aioredis.Redis | None = None
 
     async def connect(self) -> None:
+        if not self._url:
+            logger.info("locks.redis_not_configured_using_in_memory")
+            return
         self._client = aioredis.from_url(
             self._url,
             max_connections=self._max_connections,
@@ -139,6 +176,7 @@ class LockManager:
     async def close(self) -> None:
         if self._client:
             await self._client.aclose()
+            self._client = None
 
     def lock(
         self,
@@ -146,8 +184,10 @@ class LockManager:
         ttl_seconds: int = 30,
         retry_count: int = 3,
         retry_delay_ms: int = 100,
-    ) -> DistributedLock:
-        """Create a DistributedLock for the given key."""
+    ) -> DistributedLock | InMemoryLock:
+        """Create a DistributedLock (or InMemoryLock fallback) for the given key."""
         if self._client is None:
+            if not self._url:
+                return InMemoryLock(key)
             raise RuntimeError("LockManager not connected. Call connect() first.")
         return DistributedLock(self._client, key, ttl_seconds, retry_count, retry_delay_ms)
